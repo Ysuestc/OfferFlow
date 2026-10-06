@@ -1,0 +1,48 @@
+# IDE and OS files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Java and frontend build output
+target/
+out/
+*.class
+node_modules/
+dist/
+coverage/
+*.log
+logs/
+
+# Local secrets and configuration (track explicit example files)
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.local.yml
+*.local.yaml
+application-local.yml
+application-local.yaml
+application-private.yml
+application-private.yaml
+settings-local.xml
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Personal data, database dumps and source archives
+private-data/
+backups/
+*.sql.gz
+*.dump
+*.zip
+
+# Transient OpenSpec tooling output
+openspec/changes/**/processing/preflight-cache.json
+
+# Keep Maven Wrapper artifacts if added later
+!.mvn/wrapper/maven-wrapper.jar

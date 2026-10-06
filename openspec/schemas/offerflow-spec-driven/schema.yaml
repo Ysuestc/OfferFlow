@@ -1,0 +1,56 @@
+name: offerflow-spec-driven
+version: 1
+description: OfferFlow 阶段开发的方案、行为、设计和任务制品
+
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: 需求范围与可验证验收条件
+    template: proposal.md
+    instruction: |
+      根据实际请求说明为什么做、做什么、能力变化和影响。
+      阅读项目上下文，区分已确认需求、设计建议和待决定问题。
+      填写可验证 Success Criteria 与 Non-goals，保持阶段范围明确。
+    requires: []
+  - id: specs
+    generates: "specs/**/*.md"
+    description: 对外可观察的行为变化与场景
+    template: spec.md
+    instruction: |
+      按 proposal 的 capability 生成 delta spec，使用标准 Requirement 和 Scenario 标记。
+      对新增能力补充有实际含义的 Purpose。场景使用 WHEN / THEN。
+      修改既有需求时包含完整更新内容，不遗漏原有场景。
+      不将类名、实现步骤或尚未确认的猜测写成稳定行为合同。
+    requires:
+      - proposal
+  - id: design
+    generates: design.md
+    description: 基于实际现状的技术决定与验证方式
+    template: design.md
+    instruction: |
+      明确实现范围、关键决定、数据约束、接口及事务和相关风险。
+      字段、依赖及迁移说明用途。纯文档变更写清配置和引用的验证方法。
+      缺失必要业务信息时写出具体问题，不声称已有确认。
+    requires:
+      - proposal
+  - id: tasks
+    generates: tasks.md
+    description: 可验证并追踪的实施任务
+    template: tasks.md
+    instruction: |
+      使用编号复选框拆分紧密关联任务，指向场景或验收条件。
+      业务逻辑安排必要测试；文档变更安排格式、引用及语义验证。
+      包含审查和文档同步。已授权推送由交付环节完成，不要求重复确认。
+    requires:
+      - specs
+      - design
+
+apply:
+  requires:
+    - tasks
+  tracks: tasks.md
+  instruction: |
+    先读 AGENTS.md、docs/workflow.md、processing/status.md 和本次制品。
+    文件存在不代表审查、测试或用户确认已经通过。
+    在授权范围内实施未完成任务，验证后勾选并记录实际证据。
+    有业务歧义、必要验证缺失或阻断问题时记录具体问题，不伪造完成。

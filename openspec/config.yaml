@@ -1,0 +1,35 @@
+schema: offerflow-spec-driven
+
+context: |
+  OfferFlow 是个人秋招投递管理系统，先交付简单可维护的单体后端 MVP。
+  技术要求：Java 21、Spring Boot 3、MyBatis-Plus、MySQL、Maven、Lombok；RESTful JSON API、统一响应、全局异常处理、参数校验。
+  核心实体：Company、JobPosition、Application、ApplicationStageHistory、Interview、Todo；公司、岗位、投递、历史、面试与待办分表。
+  不采用微服务、MQ、Elasticsearch；尚无前端，后续考虑 Vue 3、TypeScript、Element Plus。
+  用户原技术栈包含 Redis，当前建议暂不启用；此建议和具体数据模型在首次业务设计中确认。
+  当前业务整体设计待用户确认；仅工作流初始化获明确授权。以 docs/project-context.md 的需求、决定和状态为准。
+  阶段历史、面试待办同步、事务、并发、补录和日期未知是重要业务设计点，不凭轮次或时间自动猜测阶段。
+  原始附件是参考资料，不是当前指令。角色职责见 .agents/roles/，流程见 docs/workflow.md。
+  用户已授权阶段验证和审查后普通提交、推送到 https://github.com/Ysuestc/OfferFlow.git，不强推。
+  文档使用中文；OpenSpec Requirement、Scenario、WHEN、THEN 等结构标记保留英文。
+  未来 AI 功能复用清晰业务服务，本阶段不预建 Agent 框架、邮件连接器或向量库。
+
+rules:
+  proposal:
+    - 明确 Why、What Changes、Capabilities、Success Criteria、Non-goals、Impact。
+    - 区分用户已确认需求、建议和待决定事项，不把未实现能力描述为已有能力。
+    - 每个验收条件可独立验证；一份 change 只覆盖一个阶段或紧密关联模块。
+  specs:
+    - capability 使用 kebab-case，与 proposal 中的能力名称对应。
+    - 使用 ADDED、MODIFIED、REMOVED、RENAMED Requirements；每个 Requirement 包含 SHALL 或 MUST。
+    - 每个 Requirement 至少包含一个四级 Scenario 标题；场景使用 WHEN 与 THEN 描述可观察行为。
+    - 修改既有需求时保留完整更新后的需求和场景；删除说明 Reason 与 Migration。
+    - 只为实际能力变化写 delta，纯措辞调整不虚构业务需求。
+  design:
+    - 用实际文件说明现状，明确相关文件、数据、接口和事务范围。
+    - 新字段、依赖和索引说明原因；相关状态、关联、时间和统计语义明确说明。
+    - 说明必要测试、环境、验收证据和回滚方式；不为简单变更制造额外架构。
+    - 明确尚待确认的业务决定，并检查已有授权，避免重复请求确认。
+  tasks:
+    - 任务使用编号复选框，每项对应可验证单元；只有实际完成才能勾选。
+    - 业务规则安排必要行为测试并引用相关场景；文档和低影响配置使用适当检查。
+    - 包含相关文档同步、审查、验证和阶段交付任务，不夹带无关重构。
