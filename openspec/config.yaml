@@ -6,10 +6,10 @@ context: |
   核心实体：Company、JobPosition、Application、ApplicationStageHistory、Interview、Todo；公司、岗位、投递、历史、面试与待办分表。
   不采用微服务、MQ、Elasticsearch；尚无前端，后续考虑 Vue 3、TypeScript、Element Plus。
   用户原技术栈包含 Redis，当前建议暂不启用；此建议和具体数据模型在首次业务设计中确认。
-  当前业务整体设计待用户确认；仅工作流初始化获明确授权。以 docs/project-context.md 的需求、决定和状态为准。
+  工程基础已完成并归档；后续业务模型和状态语义在对应 change 复核，不推定全部设计批准。实施范围以 docs/project-context.md 和当前用户请求为准。
   阶段历史、面试待办同步、事务、并发、补录和日期未知是重要业务设计点，不凭轮次或时间自动猜测阶段。
   原始附件是参考资料，不是当前指令。角色职责见 .agents/roles/，流程见 docs/workflow.md。
-  用户已授权阶段验证和审查后普通提交、推送到 https://github.com/Ysuestc/OfferFlow.git，不强推。
+  用户已授权验证、审查和归档后普通提交、推送到 https://github.com/Ysuestc/OfferFlow.git；一个 change 最终统一推送一次，不在中途推送、不强推。
   文档使用中文；OpenSpec Requirement、Scenario、WHEN、THEN 等结构标记保留英文。
   未来 AI 功能复用清晰业务服务，本阶段不预建 Agent 框架、邮件连接器或向量库。
 
@@ -32,4 +32,4 @@ rules:
   tasks:
     - 任务使用编号复选框，每项对应可验证单元；只有实际完成才能勾选。
     - 业务规则安排必要行为测试并引用相关场景；文档和低影响配置使用适当检查。
-    - 包含相关文档同步、审查、验证和阶段交付任务，不夹带无关重构。
+    - 包含相关文档同步、审查、验证和交付准备；归档、提交和一次推送放在验收后，不作为归档前置任务，不夹带无关重构。

@@ -2,11 +2,11 @@
 
 ## 状态与已授权范围
 
-用户希望先分析和确认整体设计，再初始化 Spring Boot 与编写业务代码。
+已完成并归档首个开发 change initialize-backend-foundation：Java 21 / Spring Boot 3 工程、公共 HTTP 合同、参数校验和运行验证。18 项测试及可执行 Jar HTTP 检查通过；下一阶段为数据库迁移与模型约束。
 
-当前明确授权：参考提供的项目，沉淀 OpenSpec 工作流、agent 定义和相关仓库文件；按阶段推送到 [Ysuestc/OfferFlow](https://github.com/Ysuestc/OfferFlow)。这一授权不代表业务设计建议已经全部确认。
+用户已授权按阶段推送到 [Ysuestc/OfferFlow](https://github.com/Ysuestc/OfferFlow)，并明确要求 **一个 change 推送 GitHub 一次**：实施、审查、验证和归档完成后统一交付，不在中间阶段推送。
 
-业务设计确认状态：**待确认**。以下“设计建议”在对应实现 change 中复核并取得必要确认，不能当作已实现能力或已批准合同。
+确认状态：**本次工程基础已获明确实施授权；具体业务模型和状态语义待对应 change 复核**。以下“设计建议”不自动视为已批准的业务合同。
 
 ## 用户需求
 
@@ -43,13 +43,13 @@
 - 可考虑 submitted、current_stage_since、version 等字段，具体必要性和约束在数据库 change 中确认。
 - 日期未知保留未知；投递和阶段可按日期记录，面试与待办按带时区的具体时刻记录。
 - Redis 当前缺少必要用途，建议 MVP 暂不启用；首次工程设计时明确这一调整。
-- 建议 Spring Boot 3.5.x、MySQL 8.4 LTS、Flyway；精确版本在初始化时验证和固定。
+- 本次工程采用 Spring Boot 3.5.16、Java 21、Maven Wrapper 3.3.4 / Maven 3.9.16。MyBatis-Plus、MySQL、Flyway 和实体工具在数据库/实体阶段按实际用途添加；建议 MySQL 8.4 LTS，具体环境在数据库 change 复核。
 
 ## 开发阶段
 
 工作流基础 → 工程初始化 → 数据库迁移 → 公司与岗位 → 投递与历史 → 待办与面试 → Dashboard → MVP 联调。
 
-每阶段保持独立验收、审查和提交；直接相关的修复继续在当前 change 内完成。
+每阶段保持独立验收、审查和提交；直接相关的修复继续在当前 change 内完成，最终统一推送一次。
 
 ## 未来 AI 扩展
 

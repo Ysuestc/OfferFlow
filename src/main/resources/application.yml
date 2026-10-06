@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: offerflow
+
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
