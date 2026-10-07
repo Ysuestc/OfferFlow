@@ -965,6 +965,12 @@ h3 {
 .todo-notes { flex: 1 0 100%; font-size: 12px; color: var(--muted); }
 .todo-notes summary { cursor: pointer; }
 .todo-notes p { line-height: 1.8; color: var(--ink); }
+.entry-modes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.entry-modes .el-button + .el-button { margin-left: 0; }
+.entry-details { margin-bottom: 16px; }
+.entry-details summary { color: var(--muted); cursor: pointer; line-height: 1.8; margin-bottom: 16px; }
+.position-search-empty { padding: 14px; text-align: center; color: var(--muted); }
+.position-search-empty .el-button { display: block; margin: 8px auto 0; }
 .activity-panel.embedded {
   margin-top: 28px;
   min-height: 0;

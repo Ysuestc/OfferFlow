@@ -160,7 +160,7 @@ onMounted(boot)
             </div>
             <div class="pagination"><el-pagination v-model:current-page="page" :page-size="size" :total="total" layout="prev, pager, next" @current-change="load" /></div>
           </template>
-          <div v-else-if="!loading && !booting" class="empty-state"><div class="empty-mark">↗</div><h2>{{ q || stage ? '还没有匹配的记录' : '从第一个机会开始' }}</h2><p>{{ q || stage ? '试试其他关键词或招聘阶段。' : view === 'companies' ? '添加目标公司，逐步整理你的秋招资料。' : view === 'positions' ? '先到公司库添加公司，再记录感兴趣的岗位。' : '先整理公司和岗位，再建立投递档案。' }}</p><el-button v-if="!q && !stage" type="primary" plain @click="create">{{ view === 'applications' ? '新增投递' : view === 'positions' ? '新增岗位' : '新增公司' }}</el-button></div>
+          <div v-else-if="!loading && !booting" class="empty-state"><div class="empty-mark">↗</div><h2>{{ q || stage ? '还没有匹配的记录' : '从第一个机会开始' }}</h2><p>{{ q || stage ? '试试其他关键词或招聘阶段。' : view === 'companies' ? '添加目标公司，逐步整理你的秋招资料。' : view === 'positions' ? '先到公司库添加公司，再记录感兴趣的岗位。' : '点击新增投递，直接填写公司和岗位即可保存。' }}</p><el-button v-if="!q && !stage" type="primary" plain @click="create">{{ view === 'applications' ? '新增投递' : view === 'positions' ? '新增岗位' : '新增公司' }}</el-button></div>
         </section>
         <footer class="page-footer">每一步进展，都有迹可循。<span>OfferFlow · 个人秋招工作台</span></footer>
       </div>

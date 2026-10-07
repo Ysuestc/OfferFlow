@@ -2,6 +2,8 @@
 
 ## 状态与已授权范围
 
+2026-10-07 根据用户“新增公司投递记录怎么保存不了，怎么还要搜索”的反馈，simplify-application-entry 修复默认新增入口：直接录入公司和岗位、一次事务建立关联档案、明确匹配复用 / 歧义选择、失败保留输入，保留已有岗位和预选方式。不新增数据库字段或依赖；99 项 Java / MySQL 测试及 12 项受影响浏览器用例通过。见 [录入修复验收](../openspec/changes/archive/2026-10-07-simplify-application-entry/processing/verification.md)。
+
 基础 MVP 已实现：公司 / 岗位 / 投递 / 阶段历史、独立面试复盘、六类待办与完成 / 重开、Dashboard 及六个 Vue 导航页。前端随 Jar 打包，独占本地数据目录支持停启保留。本次 complete-core-mvp 依据用户“继续下一步，完善所有基础功能”推进；91 项 Java / MySQL 和 14 个浏览器用例通过，已归档；见 [完整 MVP 验收](../openspec/changes/archive/2026-10-07-complete-core-mvp/processing/verification.md)。
 
 此前 deliver-application-workspace 交付公司 / 岗位 / 投递 / 历史 API 和 Vue 工作台，71 项 Java / MySQL 和 6 项浏览器验收通过；见 [首个可操作版本](../openspec/changes/archive/2026-10-07-deliver-application-workspace/proposal.md)。

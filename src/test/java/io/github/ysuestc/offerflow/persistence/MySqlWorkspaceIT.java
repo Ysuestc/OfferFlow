@@ -207,6 +207,156 @@ class MySqlWorkspaceIT {
         assertThat(get("/applications?page=2&size=1").path("items").size()).isEqualTo(1);
     }
 
+    @Test
+    void quickEntryPersistsNormalizedCatalogsApplicationAndHistory() {
+        var body = quickEntry(" 星河直录科技🌟 ", " Java 后端 ");
+        body.put("companyType", "BANK");
+        body.put("location", " 上海 ");
+        body.put("direction", " 金融科技 ");
+        body.put("recruitmentBatch", " 2026 秋招 ");
+        body.put("jd", " 岗位职责 ");
+        body.put("notes", " 投递补充 ");
+        body.put("appliedOn", "2026-09-20");
+        body.put("stageOn", "2026-09-24");
+        body.put("stage", "FIRST_INTERVIEW");
+        JsonNode app = request(HttpMethod.POST, "/applications/quick", body, 201);
+        String id = app.path("id").asText();
+        assertThat(get("/applications/" + id).path("companyName").asText()).isEqualTo("星河直录科技🌟");
+        assertThat(app.path("positionName").asText()).isEqualTo("Java 后端");
+        assertThat(app.path("notes").asText()).isEqualTo("投递补充");
+        assertThat(app.path("appliedOn").asText()).isEqualTo("2026-09-20");
+        assertThat(app.path("submitted").asBoolean()).isTrue();
+        JsonNode position = get("/positions/" + app.path("jobPositionId").asText());
+        assertThat(position.path("location").asText()).isEqualTo("上海");
+        assertThat(position.path("jd").asText()).isEqualTo("岗位职责");
+        assertThat(get("/companies/" + position.path("companyId").asText()).path("type").asText()).isEqualTo("BANK");
+        assertThat(history(id).size()).isEqualTo(1);
+        assertThat(history(id).get(0).path("stage").asText()).isEqualTo("FIRST_INTERVIEW");
+        assertThat(history(id).get(0).path("stageOn").asText()).isEqualTo("2026-09-24");
+    }
+
+    @Test
+    void quickEntryReusesUnambiguousCatalogsWithoutOverwritingDetails() {
+        String company = company("星河");
+        String position = position(company, "后端");
+        var body = quickEntry(" 星河 ", " 后端 ");
+        body.put("companyType", "BANK");
+        body.put("location", "上海");
+        body.put("direction", "Java 后端");
+        body.put("recruitmentBatch", "2026 秋招");
+        body.put("jd", "不能覆盖的 JD");
+        JsonNode app = request(HttpMethod.POST, "/applications/quick", body, 201);
+        assertThat(app.path("jobPositionId").asText()).isEqualTo(position);
+        assertThat(get("/companies").path("total").asLong()).isEqualTo(1);
+        assertThat(get("/positions").path("total").asLong()).isEqualTo(1);
+        assertThat(get("/companies/" + company).path("type").asText()).isEqualTo("INTERNET");
+        assertThat(get("/companies/" + company).path("website").asText()).isEqualTo("https://example.org");
+        assertThat(get("/positions/" + position).path("jd").asText()).isEqualTo("岗位职责");
+    }
+
+    @Test
+    void quickEntryRetryDoesNotDuplicateApplicationOrCatalogs() {
+        var body = quickEntry("星河", "后端");
+        JsonNode app = request(HttpMethod.POST, "/applications/quick", body, 201);
+        body.put("stage", "OFFER");
+        ResponseEntity<JsonNode> duplicate = raw(HttpMethod.POST, "/applications/quick", body);
+        assertThat(duplicate.getStatusCode().value()).isEqualTo(409);
+        assertThat(duplicate.getBody().path("message").asText()).isEqualTo("该岗位已有投递档案，请打开已有档案");
+        assertThat(get("/companies").path("total").asLong()).isEqualTo(1);
+        assertThat(get("/positions").path("total").asLong()).isEqualTo(1);
+        assertThat(get("/applications").path("total").asLong()).isEqualTo(1);
+        assertThat(get("/applications/" + app.path("id").asText()).path("currentStage").asText()).isEqualTo("SUBMITTED");
+        assertThat(history(app.path("id").asText()).size()).isEqualTo(1);
+    }
+
+    @Test
+    void quickEntryDistinguishesLocationDirectionAndBatch() {
+        request(HttpMethod.POST, "/applications/quick", quickEntry("星河", "后端"), 201);
+        for (String field : List.of("location", "direction", "recruitmentBatch")) {
+            var body = quickEntry("星河", "后端");
+            body.put(field, "不同身份");
+            request(HttpMethod.POST, "/applications/quick", body, 201);
+        }
+        assertThat(get("/companies").path("total").asLong()).isEqualTo(1);
+        assertThat(get("/positions").path("total").asLong()).isEqualTo(4);
+        assertThat(get("/applications").path("total").asLong()).isEqualTo(4);
+    }
+
+    @Test
+    void quickEntryRequiresExplicitCompanySelectionForAmbiguousNames() {
+        String selected = company("同名公司");
+        company("同名公司");
+        ResponseEntity<JsonNode> ambiguous = raw(HttpMethod.POST, "/applications/quick", quickEntry("同名公司", "后端"));
+        assertThat(ambiguous.getStatusCode().value()).isEqualTo(409);
+        assertThat(ambiguous.getBody().path("message").asText()).contains("选择已有公司");
+        assertThat(get("/positions").path("total").asLong()).isZero();
+        var body = quickEntry(null, "后端");
+        body.put("companyId", selected);
+        JsonNode app = request(HttpMethod.POST, "/applications/quick", body, 201);
+        assertThat(get("/positions/" + app.path("jobPositionId").asText()).path("companyId").asText()).isEqualTo(selected);
+        assertThat(get("/companies").path("total").asLong()).isEqualTo(2);
+    }
+
+    @Test
+    void quickEntryRequiresExplicitPositionSelectionForAmbiguousIdentities() {
+        String company = company("星河");
+        String selected = request(HttpMethod.POST, "/positions", Map.of("companyId", company, "name", "后端"), 201).path("id").asText();
+        request(HttpMethod.POST, "/positions", Map.of("companyId", company, "name", "后端"), 201);
+        ResponseEntity<JsonNode> ambiguous = raw(HttpMethod.POST, "/applications/quick", quickEntry("星河", "后端"));
+        assertThat(ambiguous.getStatusCode().value()).isEqualTo(409);
+        assertThat(ambiguous.getBody().path("message").asText()).contains("选择已有岗位");
+        assertThat(get("/applications").path("total").asLong()).isZero();
+        application(selected, "SUBMITTED");
+        assertThat(get("/positions").path("total").asLong()).isEqualTo(2);
+    }
+
+    @Test
+    void quickEntryInvalidInputOrStageLeavesNoPartialCatalogs() {
+        request(HttpMethod.POST, "/applications/quick", quickEntry(" ", "后端"), 400);
+        request(HttpMethod.POST, "/applications/quick", quickEntry("星河", " "), 400);
+        var body = quickEntry(null, "后端");
+        body.put("companyId", "999999");
+        request(HttpMethod.POST, "/applications/quick", body, 404);
+        body.put("companyName", "星河");
+        request(HttpMethod.POST, "/applications/quick", body, 400);
+        body = quickEntry("星河", "后端");
+        body.put("jd", "a".repeat(40001));
+        request(HttpMethod.POST, "/applications/quick", body, 400);
+        body = quickEntry("星河", "后端");
+        body.put("stage", "ENDED");
+        request(HttpMethod.POST, "/applications/quick", body, 400);
+        body.put("stage", "TO_APPLY");
+        body.put("appliedOn", "2026-09-20");
+        request(HttpMethod.POST, "/applications/quick", body, 400);
+        assertThat(get("/companies").path("total").asLong()).isZero();
+        assertThat(get("/positions").path("total").asLong()).isZero();
+        assertThat(get("/applications").path("total").asLong()).isZero();
+    }
+
+    @Test
+    void quickEntryHistoryFailureRollsBackAllNewRecords() {
+        jdbc.execute("CREATE TRIGGER workspace_reject_history BEFORE INSERT ON application_stage_history "
+                + "FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'private failure'");
+        try {
+            ResponseEntity<JsonNode> response = raw(HttpMethod.POST, "/applications/quick", quickEntry("星河", "后端"));
+            assertThat(response.getStatusCode().value()).isEqualTo(500);
+            assertThat(response.getBody().toString()).doesNotContain("private failure", "INSERT", "SQLException");
+            for (String table : List.of("company", "job_position", "application", "application_stage_history")) {
+                assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Long.class)).isZero();
+            }
+        } finally {
+            jdbc.execute("DROP TRIGGER workspace_reject_history");
+        }
+    }
+
+    private Map<String, Object> quickEntry(String companyName, String positionName) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("companyName", companyName);
+        body.put("positionName", positionName);
+        body.put("stage", "SUBMITTED");
+        return body;
+    }
+
     private String company(String name) {
         return request(HttpMethod.POST, "/companies", Map.of("name", name, "type", "INTERNET",
                 "website", "https://example.org", "notes", "示例备注"), 201).path("id").asText();

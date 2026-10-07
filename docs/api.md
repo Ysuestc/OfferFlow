@@ -13,6 +13,7 @@
 | 岗位 | GET、PUT、DELETE /api/v1/positions/{id} | 读取、替换、删除未引用岗位 |
 | 投递 | GET /api/v1/applications | q / stage / page / size |
 | 投递 | POST /api/v1/applications | jobPositionId / channel / appliedOn / stage / stageOn / endReason / submitted / notes |
+| 快捷投递 | POST /api/v1/applications/quick | companyName 或 companyId、positionName、可选目录资料及投递字段；事务建立或复用目录 |
 | 投递 | GET、PUT /api/v1/applications/{id} | 读取；PUT 仅 channel / appliedOn / notes / version |
 | 阶段 | POST /api/v1/applications/{id}/stages | stage / stageOn / endReason / remark / version |
 | 历史 | GET /api/v1/applications/{id}/history | 初始和后续有效阶段记录，按 id 升序；recordedAt 为 UTC 时刻 |
@@ -32,6 +33,22 @@ ENDED 必须提供五种 endReason 之一，其他阶段不能提供。REJECTED 
 应用元信息或阶段更新需要 version。最新版本检查及写入为乐观并发控制，过期为 409。阶段、日期和原因均无变化且版本有效时不追加历史、版本不递增；历史备注用于有效变更。快照更新和历史插入同一事务，任一步失败均不提交。
 
 ## 错误及示例
+
+快捷录入：companyName / companyId 二选一，positionName / stage 必填；companyType 可选，创建新公司时默认 OTHER。可选 location、direction、recruitmentBatch、jd 和投递 channel、appliedOn、stageOn、endReason、submitted、notes 沿用既有长度 / 日期 / 阶段约束。请求示例：
+
+```json
+{
+  "companyName": "星河示例科技",
+  "positionName": "Java 后端",
+  "stage": "SUBMITTED",
+  "channel": "官网",
+  "appliedOn": "2026-09-20"
+}
+```
+
+公司名称按数据库排序规则等值匹配，唯一匹配复用；多个同名返回 409，可改传 companyId。岗位按公司、名称、地点、方向、批次（包括 null）唯一匹配复用；多个匹配返回 409，使用既有 /applications 接口选择具体 jobPositionId。复用不覆盖已有公司类型、官网、备注或 JD；不同批次 / 地点 / 方向分别建岗。空可选字段转 null，未知日期不推断。
+
+公司、岗位、投递、初始历史在一个事务中保存，任一步失败不留下部分新记录。同岗位已有投递返回既有 409，不更新原档案。目录未增加全局唯一约束，两个并发请求首次创建同名公司或同身份岗位不保证幂等；浏览器保存期间禁止重复提交。
 
 400：参数、日期、类型、必填或业务语义非法；404：公司 / 岗位 / 档案不存在；409：同岗位重复档案、引用保护、陈旧版本；500：未知服务端故障，消息不包含 SQL / 原始异常。
 

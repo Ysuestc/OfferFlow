@@ -4,6 +4,7 @@ import io.github.ysuestc.offerflow.common.api.*;
 import io.github.ysuestc.offerflow.application.dto.*;
 import io.github.ysuestc.offerflow.application.entity.ApplicationStage;
 import io.github.ysuestc.offerflow.application.service.ApplicationService;
+import io.github.ysuestc.offerflow.application.service.ApplicationEntryService;
 import io.github.ysuestc.offerflow.application.vo.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ApplicationController {
     private final ApplicationService service;
+    private final ApplicationEntryService entryService;
     @GetMapping
     public ApiResponse<PageResponse<ApplicationView>> list(@RequestParam(defaultValue = "") @Size(max = 100) String q,
             @RequestParam(required = false) ApplicationStage stage,
@@ -30,6 +32,11 @@ public class ApplicationController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ApplicationView> create(@Valid @RequestBody ApplicationRequest request) {
         return ApiResponse.success(service.create(request));
+    }
+    @PostMapping("/quick")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<ApplicationView> quick(@Valid @RequestBody ApplicationEntryRequest request) {
+        return ApiResponse.success(entryService.create(request));
     }
     @GetMapping("/{id}")
     public ApiResponse<ApplicationView> get(@PathVariable @Positive long id) { return ApiResponse.success(service.get(id)); }

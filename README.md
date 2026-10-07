@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-基础 MVP 已完成：Vue 3 / TypeScript / Element Plus 页面连接真实 MySQL 后端，支持公司、岗位、投递档案与完整阶段历史、独立面试复盘、待办完成 / 重开和首页 Dashboard。数据保存到 MySQL，刷新或重启后保留。
+基础 MVP 已完成：Vue 3 / TypeScript / Element Plus 页面连接真实 MySQL 后端，支持公司、岗位、投递档案与完整阶段历史、独立面试复盘、待办完成 / 重开和首页 Dashboard。新增投递默认直接填写公司和岗位，无需提前建目录。数据保存到 MySQL，刷新或重启后保留。
 
 后端使用 Java 21、Spring Boot 3.5.16、MyBatis-Plus 3.5.17、MySQL、Flyway、Lombok 和 Maven Wrapper。前端生产文件随 Jar 打包，页面和 API 共用一个端口。默认本机使用，没有登录或 AI；Redis 按实际需要启用。面试 / 待办不隐式改变招聘阶段，已发生面试和未来七天截止事项分别展示。
 
@@ -17,7 +17,7 @@ python scripts/build.py
 python scripts/run_local.py --mysql-bin '<MySQL 安装目录>/bin'
 ```
 
-打开 http://127.0.0.1:8080，先添加公司和岗位，再建立投递。辅助脚本使用自己的 MySQL 实例，不修改已有服务；数据保留在被忽略的 private-data/local。停止可以按 Ctrl+C 或执行：
+打开 http://127.0.0.1:8080，点击“新增投递”，直接填写公司名称、岗位名称和投递信息即可保存，无需先建公司 / 岗位或搜索。也可切换“选择已有岗位”，或从岗位库预选建立投递。辅助脚本使用自己的 MySQL 实例，不修改已有服务；数据保留在被忽略的 private-data/local。停止可以按 Ctrl+C 或执行：
 
 ```powershell
 python scripts/run_local.py --stop
@@ -98,7 +98,7 @@ GET /api/v1/health 返回：
 python scripts/verify_mysql.py --mysql-bin '<MySQL 安装目录>/bin'
 ```
 
-脚本初始化自身临时 datadir 和随机测试库，使用独立 loopback 端口，完成后停止自己的实例并清理目录；不连接已有 MySQL 服务。--probe 仅验证实例启动 / 清理。72 项真实 MySQL 测试覆盖迁移、六 Mapper、外键、唯一键、状态 / 结束原因、未知日期、UTC 微秒、乐观锁、事务和工作台 HTTP 行为；加上 19 项基础 HTTP 测试，共 91 项。前端另有 14 项桌面 / 手机浏览器用例，覆盖公司 / 投递 / 面试复盘 / 六类待办完整操作、完成重开、关联保护、失败输入保留、并发冲突和断线恢复。已验证 Windows / MySQL 8.0.34；MySQL 8.4 与其他操作系统的隔离脚本尚未验证。显式 CI 测试设置要求见 [数据库说明](docs/database.md#数据库验收)。
+脚本初始化自身临时 datadir 和随机测试库，使用独立 loopback 端口，完成后停止自己的实例并清理目录；不连接已有 MySQL 服务。--probe 仅验证实例启动 / 清理。80 项真实 MySQL 测试覆盖迁移、六 Mapper、外键、唯一键、状态 / 结束原因、未知日期、UTC 微秒、乐观锁、事务和工作台 HTTP 行为；加上 19 项基础 HTTP 测试，共 99 项。前端共 20 项桌面 / 手机浏览器用例，覆盖公司 / 投递 / 面试复盘 / 六类待办完整操作、完成重开、关联保护、失败输入保留、并发冲突和断线恢复。本次入口修复执行 12 项受影响浏览器用例；其余用例保留上阶段验证证据。已验证 Windows / MySQL 8.0.34；MySQL 8.4 与其他操作系统的隔离脚本尚未验证。显式 CI 测试设置要求见 [数据库说明](docs/database.md#数据库验收)。
 
 ## 工作流入口
 
