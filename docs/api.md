@@ -48,3 +48,51 @@ ENDED 必须提供五种 endReason 之一，其他阶段不能提供。REJECTED 
 ```
 
 同一个岗位使用一份档案，channel 填主要渠道，其他渠道放 notes。不同批次分别创建岗位，避免覆盖原 JD。
+
+## 面试
+
+| 方法 | 路径 | 行为 |
+|---|---|---|
+| GET | /api/v1/interviews | 分页摘要，不含问题 / 回答 / 复盘长文本 |
+| POST | /api/v1/interviews | 建立独立面试记录，201 |
+| GET | /api/v1/interviews/{id} | 完整内容 |
+| PUT | /api/v1/interviews/{id} | 完整编辑，必须传 version |
+| DELETE | /api/v1/interviews/{id}?version=0 | 未被待办引用且版本匹配才删除 |
+
+创建：applicationId 必填正整数；roundName 必填最多 64；interviewAt 为带时区 ISO-8601 或 null；format=ONLINE/OFFLINE/AI 或 null；questions / answers / review 各 40000，result 16000，可空。更新字段相同但无 applicationId，并新增 version（非负必填），关联不能重绑；省略可选字段将清空。
+
+列表额外支持 applicationId、format，q 匹配公司 / 岗位 / 轮次；按 interviewAt DESC、id DESC，未知最后。摘要和详情含公司 / 岗位标签、字符串 ID、version 和 updatedAt。面试 CRUD 不改变投递阶段或历史。删除引用面试返回 409，可先编辑待办清除 interviewId。过期更新 / 删除 409，记录不存在 404。
+
+## 待办
+
+| 方法 | 路径 | 行为 |
+|---|---|---|
+| GET / POST | /api/v1/todos | 分页 / 新建（201） |
+| GET / PUT / DELETE | /api/v1/todos/{id} | 详情 / 完整编辑 / 删除 |
+| PUT | /api/v1/todos/{id}/completion | 完成或重开 |
+
+创建：applicationId 必填；interviewId 正整数或 null，仅能关联同投递面试；kind=WRITTEN_TEST/INTERVIEW/ASSESSMENT/MATERIAL/OFFER_DEADLINE/OTHER；title 必填 255；dueAt 带时区 ISO-8601 或 null；notes 16000 或 null。更新无 applicationId、必须带 version，普通编辑不会改变完成状态。DELETE 必须带 ?version=。同投递校验错误 400，引用缺失 404，数据库关联发生变化或版本过期 409。
+
+完成请求示例：
+```json
+{ "completed": true, "version": 0 }
+```
+服务端首次完成记录 completedAt；当前版本重复完成是无操作（时间 / 版本不变），旧版本仍 409。completed=false 重新打开并清空完成时间。前端冲突保留笔记，重新加载前可复制输入。
+
+筛选支持 applicationId、kind、completed=true/false、timing=UPCOMING/OVERDUE/UNDATED，q 匹配公司 / 岗位 / 标题。timing 只查询未完成项，组合 completed=true 返回空。UPCOMING=[now, now+7天)，OVERDUE=dueAt<now，UNDATED=dueAt null。按未完成优先、截止时间 ASC、未知最后、id ASC 排序。分页与关键词限制沿用公共合同。
+
+## Dashboard
+
+GET /api/v1/dashboard 返回：
+
+- counts.totalSubmitted：submitted=true，包含投递后结束的历史事实。
+- counts.active：submitted=true 且当前非 TO_APPLY / OFFER / REJECTED / ENDED。
+- counts.interviewing：submitted=true 且当前 FIRST_INTERVIEW / SECOND_INTERVIEW / THIRD_INTERVIEW / HR_INTERVIEW，是 active 子集。
+- counts.offers / rejected：当前 OFFER / REJECTED，主动拒绝 Offer、接受 Offer 后 ENDED 不计当前 Offer。
+- generatedAt / upcomingUntil：同一次服务端 UTC 时刻及七天窗口末端。
+- upcomingTodoCount / overdueTodoCount / undatedTodoCount：对应未完成事项总数。
+- recentApplications：最近实际投递，appliedOn DESC / id DESC，未知日期最后。
+- recentInterviews：已知且 interviewAt ≤ generatedAt 的最近面试，时间 DESC / id DESC；排除未来预约和未知。
+- upcomingTodos / overdueTodos：对应窗口的未完成待办，各最多 5 条；总数可能大于列表长度。
+
+所有最近列表最多 5 条，未知日期不猜测；响应采用统一 JSON 合同，首页加载失败可重试。默认仅 mysql 模式提供业务接口，standalone 不提供。

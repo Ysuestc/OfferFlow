@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { defineAsyncComponent, onMounted, ref } from 'vue'
 import { api, stages, reasons, stageTone, day, localTime, type Application, type History, type Position } from '../api'
 import RecordEditor from './RecordEditor.vue'
+const RecruitmentRecords = defineAsyncComponent(() => import('./RecruitmentRecords.vue'))
 const props = defineProps<{ id: string }>()
 const emit = defineEmits<{ close: []; updated: [] }>()
 const application = ref<Application>()
@@ -45,6 +46,8 @@ onMounted(load)
           <div><dt>当前阶段日期</dt><dd>{{ day(application.currentStageOn) }}</dd></div>
         </dl>
         <section v-if="application.notes" class="detail-section"><h3>投递备注</h3><p class="preserve-text">{{ application.notes }}</p></section>
+        <RecruitmentRecords kind="interview" :application="application" @updated="emit('updated')" />
+        <RecruitmentRecords kind="todo" :application="application" @updated="emit('updated')" />
         <section class="detail-section"><h3>阶段时间线 <span>{{ history.length }} 条记录</span></h3><p class="field-help">按记录顺序展示，业务日期未知时留空；纠正阶段会保留原记录。</p>
           <el-timeline>
             <el-timeline-item v-for="entry in [...history].reverse()" :key="entry.id" :timestamp="day(entry.stageOn)" placement="top" :type="stageTone(entry.stage)">

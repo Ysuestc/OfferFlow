@@ -168,15 +168,18 @@ def main():
             db_name = f"offerflow_it_{token}"
             migration_db = db_name + "_migration"
             workspace_db = db_name + "_workspace"
+            mvp_db = db_name + "_mvp"
             password = secrets.token_hex(24)
             setup = run_mysql(binaries["mysql"], port, f"""
                 CREATE DATABASE {db_name} CHARACTER SET utf8mb4;
                 CREATE DATABASE {migration_db} CHARACTER SET utf8mb4;
                 CREATE DATABASE {workspace_db} CHARACTER SET utf8mb4;
+                CREATE DATABASE {mvp_db} CHARACTER SET utf8mb4;
                 CREATE USER 'offerflow_test'@'127.0.0.1' IDENTIFIED BY '{password}';
                 GRANT ALL ON {db_name}.* TO 'offerflow_test'@'127.0.0.1';
                 GRANT ALL ON {migration_db}.* TO 'offerflow_test'@'127.0.0.1';
                 GRANT ALL ON {workspace_db}.* TO 'offerflow_test'@'127.0.0.1';
+                GRANT ALL ON {mvp_db}.* TO 'offerflow_test'@'127.0.0.1';
             """)
             if setup.returncode:
                 raise RuntimeError("Unable to prepare owned test schemas")
@@ -191,6 +194,8 @@ def main():
                     f"jdbc:mysql://127.0.0.1:{port}/{migration_db}",
                 "OFFERFLOW_TEST_WORKSPACE_DB_URL":
                     f"jdbc:mysql://127.0.0.1:{port}/{workspace_db}",
+                "OFFERFLOW_TEST_MVP_DB_URL":
+                    f"jdbc:mysql://127.0.0.1:{port}/{mvp_db}",
                 "OFFERFLOW_TEST_DB_USERNAME": "offerflow_test",
                 "OFFERFLOW_TEST_DB_PASSWORD": password,
             })

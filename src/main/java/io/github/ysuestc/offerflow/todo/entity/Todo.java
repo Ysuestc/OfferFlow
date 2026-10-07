@@ -1,6 +1,7 @@
 package io.github.ysuestc.offerflow.todo.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.github.ysuestc.offerflow.common.persistence.BaseEntity;
 import java.time.Instant;
 import lombok.Getter;
@@ -10,6 +11,9 @@ import lombok.Setter;
 @Setter
 @TableName("todo")
 public class Todo extends BaseEntity {
+
+    @Version
+    private Integer version;
 
     private Long applicationId;
 

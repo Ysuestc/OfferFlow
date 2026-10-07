@@ -1,18 +1,28 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ElConfigProvider } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { api, companyTypes, stages, stageTone, day, safeWebsite, type Company, type Position, type Application, type Page } from './api'
 import RecordEditor from './components/RecordEditor.vue'
 import ApplicationDetail from './components/ApplicationDetail.vue'
+import DashboardView from './components/DashboardView.vue'
+const RecruitmentRecords = defineAsyncComponent(() => import('./components/RecruitmentRecords.vue'))
+const InterviewDetail = defineAsyncComponent(() => import('./components/InterviewDetail.vue'))
 
-type View = 'applications' | 'positions' | 'companies'
+type View = 'dashboard' | 'applications' | 'interviews' | 'todos' | 'positions' | 'companies'
 type Kind = 'application' | 'position' | 'company'
-const views = { applications: { label: '投递台账', hint: '把每一次投递，推进得更有把握。', kind: 'application' },
+const views = { dashboard: { label: '首页概览', hint: '看清进展，安排下一步。', kind: 'application' },
+  applications: { label: '投递台账', hint: '把每一次投递，推进得更有把握。', kind: 'application' },
+  interviews: { label: '面试记录', hint: '记下每一轮问题，把复盘变成下一次的准备。', kind: 'application' },
+  todos: { label: '待办事项', hint: '把时间记清楚，让重要的截止事项不再遗漏。', kind: 'application' },
   positions: { label: '岗位库', hint: '留下 JD 与招聘批次，为每个机会做好准备。', kind: 'position' },
   companies: { label: '公司库', hint: '整理目标公司，让机会有迹可循。', kind: 'company' } } as const
-const view = ref<View>('applications')
+const view = ref<View>('dashboard')
+const activity = ref<{ create: () => void; load: () => Promise<void> }>()
+const dashboard = ref<InstanceType<typeof DashboardView>>()
+const interviewDetail = ref<string>()
+const todoTiming = ref('')
 const q = ref('')
 const stage = ref('')
 const page = ref(1)
@@ -36,6 +46,7 @@ const year = new Date().getFullYear()
 let requestSequence = 0
 async function load() {
   if (!available.value) return
+  if (view.value === 'dashboard' || view.value === 'interviews' || view.value === 'todos') return
   const sequence = ++requestSequence
   const selected = view.value
   loading.value = true
@@ -65,7 +76,7 @@ async function loadCounts() {
   }
 }
 async function refresh() {
-  await Promise.all([load(), loadCounts()])
+  await Promise.all([load(), loadCounts(), dashboard.value?.load()])
 }
 async function boot() {
   booting.value = true
@@ -78,7 +89,13 @@ async function boot() {
 }
 watch(view, () => { q.value = ''; stage.value = ''; page.value = 1; load() })
 function search() { page.value = 1; load() }
-function create() { editor.value = { kind: currentView.value.kind } }
+function create() {
+  if (view.value === 'interviews' || view.value === 'todos') activity.value?.create()
+  else editor.value = { kind: currentView.value.kind }
+}
+function openTodos(timing = '') { todoTiming.value = timing; view.value = 'todos' }
+function selectView(key: View) { if (key === 'todos') todoTiming.value = ''; view.value = key }
+function openApplication(id: string) { interviewDetail.value = undefined; detail.value = id }
 async function saved() { editor.value = undefined; await refresh() }
 async function remove(kind: 'company' | 'position', item: Company | Position) {
   try { await ElMessageBox.confirm('删除“' + item.name + '”？已被引用的记录会保留。', '确认删除', { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }) }
@@ -97,21 +114,23 @@ onMounted(boot)
     <aside class="sidebar">
       <a class="brand" href="/" aria-label="OfferFlow 首页"><span class="brand-mark"><svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true"><path d="M5 20V8h7v5h6V5h5v18H5Z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round" /></svg></span><span>Offer<span class="brand-flow">Flow</span></span></a>
       <div class="sidebar-caption">我的秋招空间</div>
-      <nav aria-label="工作台导航"><button v-for="(item, key) in views" :key="key" :class="{ active: view === key }" :aria-current="view === key ? 'page' : undefined" @click="view = key"><span class="nav-symbol" aria-hidden="true">{{ key === 'applications' ? '↗' : key === 'positions' ? '▤' : '◈' }}</span>{{ item.label }}</button></nav>
+      <nav aria-label="工作台导航"><button v-for="(item, key) in views" :key="key" :class="{ active: view === key }" :aria-current="view === key ? 'page' : undefined" @click="selectView(key)"><span class="nav-symbol" aria-hidden="true">{{ { dashboard: '◉', applications: '↗', interviews: '◷', todos: '✓', positions: '▤', companies: '◈' }[key] }}</span>{{ item.label }}</button></nav>
       <div class="sidebar-note"><span class="small-dot"></span> 少一点遗忘，多一点从容<p>每一个机会，都值得认真记录。</p></div>
       <div class="sidebar-footer">PERSONAL WORKSPACE <span>v0.1</span></div>
     </aside>
     <main>
       <header class="topbar"><span>工作空间 <span class="breadcrumb"> / {{ currentView.label }}</span></span><span class="season"><span class="small-dot"></span>{{ year }} 秋招</span></header>
       <div class="content">
-        <section class="hero"><div><span class="eyebrow">YOUR NEXT CHAPTER</span><h1>{{ currentView.label }}</h1><p>{{ currentView.hint }}</p></div><el-button type="primary" size="large" :disabled="!available || booting" @click="create">＋ {{ view === 'applications' ? '新增投递' : view === 'positions' ? '新增岗位' : '新增公司' }}</el-button></section>
-        <div class="overview" aria-label="资料概览">
+        <section class="hero"><div><span class="eyebrow">YOUR NEXT CHAPTER</span><h1>{{ currentView.label }}</h1><p>{{ currentView.hint }}</p></div><el-button type="primary" size="large" :disabled="!available || booting" @click="create">＋ {{ view === 'interviews' ? '新增面试' : view === 'todos' ? '新增待办' : view === 'positions' ? '新增岗位' : view === 'companies' ? '新增公司' : '新增投递' }}</el-button></section>
+        <div v-if="view !== 'dashboard'" class="overview" aria-label="资料概览">
           <button @click="view = 'applications'"><span>投递档案</span><strong>{{ available ? counts.applications ?? '—' : '—' }}</strong><small>每个岗位一份记录</small></button>
           <button @click="view = 'positions'"><span>已整理岗位</span><strong>{{ available ? counts.positions ?? '—' : '—' }}</strong><small>保留 JD 与招聘批次</small></button>
           <button @click="view = 'companies'"><span>目标公司</span><strong>{{ available ? counts.companies ?? '—' : '—' }}</strong><small>积累你的公司资料库</small></button>
         </div>
         <el-alert v-if="countsError" :title="countsError" type="warning" show-icon :closable="false" class="form-alert" />
         <section v-if="!available && !booting" class="setup-state"><h2>{{ error ? '暂时无法连接工作台' : '开启你的秋招工作台' }}</h2><p>{{ error || '请按照仓库 README 的本地运行步骤启动数据库模式，即可保存公司、岗位和投递记录。' }}</p><el-button @click="boot">重新连接</el-button></section>
+        <DashboardView v-else-if="available && view === 'dashboard'" ref="dashboard" @application="openApplication" @interview="interviewDetail = $event" @todos="openTodos" @applications="view = 'applications'" />
+        <RecruitmentRecords v-else-if="available && (view === 'interviews' || view === 'todos')" :key="view" ref="activity" :kind="view === 'interviews' ? 'interview' : 'todo'" :initial-timing="todoTiming" @updated="refresh" @application="openApplication" />
         <section v-else class="records-panel" v-loading="loading || booting">
           <div class="toolbar"><div class="search"><el-input v-model="q" clearable maxlength="100" :placeholder="view === 'companies' ? '搜索公司名称' : '搜索公司或岗位名称'" aria-label="搜索记录" @keyup.enter="search" @clear="search" /><el-button @click="search">搜索</el-button></div>
             <div class="filters"><el-select v-if="view === 'applications'" v-model="stage" clearable placeholder="全部阶段" aria-label="筛选招聘阶段" @change="search"><el-option v-for="(label, value) in stages" :key="value" :label="label" :value="value" /></el-select><el-button text :disabled="loading" @click="refresh">刷新</el-button></div>
@@ -148,6 +167,7 @@ onMounted(boot)
     </main>
     <RecordEditor v-if="editor" :kind="editor.kind" :item="editor.item" :preset-position="editor.presetPosition" @close="editor = undefined" @saved="saved" />
     <ApplicationDetail v-if="detail" :id="detail" @close="detail = undefined" @updated="refresh" />
+    <InterviewDetail v-if="interviewDetail" :id="interviewDetail" @close="interviewDetail = undefined" @updated="refresh" @application="openApplication" />
   </div>
   </ElConfigProvider>
 </template>

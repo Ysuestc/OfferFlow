@@ -1,6 +1,7 @@
 package io.github.ysuestc.offerflow.interview.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.Version;
 import io.github.ysuestc.offerflow.common.persistence.BaseEntity;
 import java.time.Instant;
 import lombok.Getter;
@@ -26,4 +27,7 @@ public class Interview extends BaseEntity {
     private String review;
 
     private String result;
+
+    @Version
+    private Integer version;
 }

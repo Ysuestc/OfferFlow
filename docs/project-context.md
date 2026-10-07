@@ -2,7 +2,9 @@
 
 ## 状态与已授权范围
 
-当前可操作版本已交付：公司 / 岗位 / 投递 / 阶段历史 API 和 Vue 工作台，前端随 Jar 打包，独占本地数据目录支持停启保留。71 项 Java / MySQL 和 6 项浏览器验收通过；见 [本次 change](../openspec/changes/archive/2026-10-07-deliver-application-workspace/proposal.md) 与 [验收证据](../openspec/changes/archive/2026-10-07-deliver-application-workspace/processing/verification.md)。下一步为面试与待办及页面，再补完整 Dashboard。
+基础 MVP 已实现：公司 / 岗位 / 投递 / 阶段历史、独立面试复盘、六类待办与完成 / 重开、Dashboard 及六个 Vue 导航页。前端随 Jar 打包，独占本地数据目录支持停启保留。本次 complete-core-mvp 依据用户“继续下一步，完善所有基础功能”推进；91 项 Java / MySQL 和 14 个浏览器用例通过，已归档；见 [完整 MVP 验收](../openspec/changes/archive/2026-10-07-complete-core-mvp/processing/verification.md)。
+
+此前 deliver-application-workspace 交付公司 / 岗位 / 投递 / 历史 API 和 Vue 工作台，71 项 Java / MySQL 和 6 项浏览器验收通过；见 [首个可操作版本](../openspec/changes/archive/2026-10-07-deliver-application-workspace/proposal.md)。
 
 已完成并归档首个开发 change initialize-backend-foundation：Java 21 / Spring Boot 3 工程、公共 HTTP 合同、参数校验和运行验证。18 项测试及可执行 Jar HTTP 检查通过；下一阶段为数据库迁移与模型约束。
 
@@ -16,7 +18,7 @@
 
 - 同一具体岗位单档案，多渠道合并，记录主要渠道；不同招聘批次使用不同 JobPosition。
 - REJECTED 仅指企业拒绝；主动拒绝 Offer、接受 Offer、撤回、岗位关闭使用 ENDED + end_reason。
-- 六表关联、日期 / UTC 时刻、字段和静态约束已落实，见 [数据库说明](database.md)。本次实现手动阶段跳过 / 纠正与追加历史、版本冲突处理；独立历史补录、面试待办自动同步和统计接口仍在后续阶段定义。
+- 六表关联、日期 / UTC 时刻、字段和静态约束已落实，见 [数据库说明](database.md)。已实现手动阶段跳过 / 纠正与追加历史、版本冲突处理；本次实现独立面试、待办和明确口径的统计接口，保持手动管理，不自动同步或猜测阶段。独立历史补录仍待后续定义。
 
 2026-10-07 用户要求“继续下一步，什么时候能先做出一个有前端可实操可运行系统”，本次调整开发顺序：deliver-application-workspace 交付公司 / 岗位 / 投递 / 历史 API 和 Vue 工作台；不等待面试、待办和 Dashboard 全部完成。设计与验收见对应 change，运行入口见 [本地开发说明](local-development.md)。
 
@@ -43,21 +45,21 @@
 - 按最新请求提前提供前端，使用 Vue 3、TypeScript、Element Plus，生产文件随 Spring Boot Jar 打包。
 - 每模块说明改动，说明新增字段和依赖用途，编写必要测试，保证可编译运行。
 
-## 整体设计建议，尚待确认
+## 实施决定与后续建议
 
 - 单用户、单 Maven 模块；业务按 company、position、application、interview、todo、dashboard 组织。
 - 投递渠道和日期属于 Application；招聘批次属于 JobPosition，不同批次保留不同 JD。
 - 手动阶段允许跳过或回退；当前快照和追加历史在事务中协调已实现。独立历史补录仍待以后定义。
-- 安排面试与录入结果不隐式推导招聘阶段；面试和其关联待办通过明确规则同步。
-- 总投递以实际投递事实计数；进行中包含面试中；当前 Offer 与累计 Offer 明确区分。
-- 当前模型使用 submitted、current_stage_on、version；统计口径和阶段变更服务在业务阶段定义。
+- 安排面试与录入结果不隐式推导招聘阶段；当前面试和待办分别手动维护，自动同步留待明确需求。
+- 总投递已按实际投递事实计数；进行中包含面试中；Offer 仅统计当前阶段，未实现累计 Offer 指标。
+- 当前模型使用 submitted、current_stage_on、version；投递、面试、待办版本及统计口径已落实。
 - 日期未知保留未知；投递和阶段可按日期记录，面试与待办按带时区的具体时刻记录。
 - Redis 当前缺少必要用途，建议 MVP 暂不启用；首次工程设计时明确这一调整。
 - 已使用 Spring Boot 3.5.16、Java 21、Maven Wrapper 3.3.4 / Maven 3.9.16、MyBatis-Plus 3.5.17、MySQL JDBC、Flyway 和 Lombok。数据库行为真实验证 MySQL 8.0.34，MySQL 8.4 LTS 尚未运行验证。
 
 ## 开发阶段
 
-工作流基础 → 工程初始化 → 数据库迁移 → 带前端的公司 / 岗位 / 投递工作台 → 待办与面试及页面 → Dashboard → 完整 MVP 联调。
+工作流基础 → 工程初始化 → 数据库迁移 → 带前端的公司 / 岗位 / 投递工作台 → complete-core-mvp 整合面试 / 待办 / Dashboard → 实际使用反馈迭代。
 
 每阶段保持独立验收、审查和提交；直接相关的修复继续在当前 change 内完成，最终统一推送一次。
 

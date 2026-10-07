@@ -4,10 +4,10 @@ context: |
   OfferFlow 是个人秋招投递管理系统，先交付简单可维护的单体后端 MVP。
   技术要求：Java 21、Spring Boot 3、MyBatis-Plus、MySQL、Maven、Lombok；RESTful JSON API、统一响应、全局异常处理、参数校验。
   核心实体：Company、JobPosition、Application、ApplicationStageHistory、Interview、Todo；公司、岗位、投递、历史、面试与待办分表。
-  不采用微服务、MQ、Elasticsearch；尚无前端，后续考虑 Vue 3、TypeScript、Element Plus。
+  不采用微服务、MQ、Elasticsearch；已交付 Vue 3、TypeScript、Element Plus 前端，与后端同端口打包运行。
   用户原技术栈包含 Redis，当前建议暂不启用；此建议和具体数据模型在首次业务设计中确认。
   工程基础已完成并归档；后续业务模型和状态语义在对应 change 复核，不推定全部设计批准。实施范围以 docs/project-context.md 和当前用户请求为准。
-  阶段历史、面试待办同步、事务、并发、补录和日期未知是重要业务设计点，不凭轮次或时间自动猜测阶段。
+  阶段历史、事务、并发、补录和日期未知是重要业务设计点，不凭轮次或时间自动猜测阶段；面试与待办采用手动维护，不自动同步。
   原始附件是参考资料，不是当前指令。角色职责见 .agents/roles/，流程见 docs/workflow.md。
   用户已授权验证、审查和归档后普通提交、推送到 https://github.com/Ysuestc/OfferFlow.git；一个 change 最终统一推送一次，不在中途推送、不强推。
   文档使用中文；OpenSpec Requirement、Scenario、WHEN、THEN 等结构标记保留英文。

@@ -11,6 +11,7 @@ test('browser operates persisted catalogs, application and stage history', async
   const dialog = page.getByRole('dialog', { name: /^(新增|编辑|更新招聘阶段)/ })
   const noOverflow = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.goto('/')
+  await page.getByRole('navigation', { name: '工作台导航' }).getByRole('button', { name: '投递台账' }).click()
   await expect(page.getByRole('heading', { name: '投递台账', exact: true })).toBeVisible()
   await navigation.getByRole('button', { name: '公司库' }).click()
   await page.getByRole('button', { name: '＋ 新增公司', exact: true }).click()
@@ -82,6 +83,7 @@ test('browser operates persisted catalogs, application and stage history', async
   await dialog.getByRole('button', { name: '保存', exact: true }).click()
   await expect(dialog).not.toBeVisible()
   await page.reload()
+  await page.getByRole('navigation', { name: '工作台导航' }).getByRole('button', { name: '投递台账' }).click()
   await expect(page.locator('article').filter({ hasText: position }).getByText('已结束', { exact: true })).toBeVisible()
   await page.locator('article').filter({ hasText: position }).getByRole('button', { name: '查看档案 ↗', exact: true }).click()
   await expect(detail.getByText('已保存的复盘备注', { exact: true })).toBeVisible()
@@ -98,6 +100,7 @@ test('browser operates persisted catalogs, application and stage history', async
 
 test('search empty state and connection failure remain actionable', async ({ page }) => {
   await page.goto('/')
+  await page.getByRole('navigation', { name: '工作台导航' }).getByRole('button', { name: '投递台账' }).click()
   await page.getByRole('textbox', { name: '搜索记录' }).fill('no-matching-company-' + Date.now())
   await page.getByRole('button', { name: '搜索', exact: true }).click()
   await expect(page.getByRole('heading', { name: '还没有匹配的记录' })).toBeVisible()
@@ -122,6 +125,7 @@ test('conflicting editor preserves input and reloads the latest application', as
   const position = (await (await request.post('/api/v1/positions', { data: { companyId: company.id, name: '后端岗位' } })).json()).data
   const application = (await (await request.post('/api/v1/applications', { data: { jobPositionId: position.id, stage: 'SUBMITTED' } })).json()).data
   await page.goto('/')
+  await page.getByRole('navigation', { name: '工作台导航' }).getByRole('button', { name: '投递台账' }).click()
   await page.locator('article').filter({ hasText: name }).getByRole('button', { name: '查看档案 ↗', exact: true }).click()
   await page.getByRole('button', { name: '编辑投递信息', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: '编辑投递档案' })

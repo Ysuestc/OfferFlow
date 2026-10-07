@@ -36,6 +36,18 @@ record MySqlTestSettings(Database primary, Database migration) {
         return value;
     }
 
+    static Database mvp() {
+        MySqlTestSettings settings = fromEnvironment();
+        Database workspace = workspace();
+        Database database = database("OFFERFLOW_TEST_MVP_DB_URL",
+                required("OFFERFLOW_TEST_DB_USERNAME"), required("OFFERFLOW_TEST_DB_PASSWORD"));
+        if (database.url().equals(settings.primary().url()) || database.url().equals(settings.migration().url())
+                || database.url().equals(workspace.url())) {
+            throw new IllegalStateException("MVP tests require a fourth distinct dedicated schema");
+        }
+        return database;
+    }
+
     private static Database database(String key, String username, String password) {
         String url = required(key);
         URI uri;

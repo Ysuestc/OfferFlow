@@ -3,6 +3,13 @@ export interface Position { id: string; companyId: string; companyName: string; 
 export interface Application { id: string; jobPositionId: string; companyId: string; companyName: string; positionName: string; location: string | null; direction: string | null; recruitmentBatch: string | null; channel: string | null; appliedOn: string | null; submitted: boolean; currentStage: string; currentStageOn: string | null; endReason: string | null; notes: string | null; version: number; updatedAt: string }
 export interface History { id: string; stage: string; stageOn: string | null; endReason: string | null; remark: string | null; recordedAt: string }
 export interface Page<T> { items: T[]; total: number; page: number; size: number }
+export interface InterviewSummary { id: string; applicationId: string; companyName: string; positionName: string; roundName: string; interviewAt: string | null; format: string | null; version: number; updatedAt: string }
+export interface Interview extends InterviewSummary { questions: string | null; answers: string | null; review: string | null; result: string | null }
+export interface Todo { id: string; applicationId: string; companyName: string; positionName: string; interviewId: string | null; interviewRound: string | null; kind: string; title: string; dueAt: string | null; completed: boolean; completedAt: string | null; notes: string | null; version: number; updatedAt: string }
+export interface Dashboard { counts: { totalSubmitted: number; active: number; interviewing: number; offers: number; rejected: number }; generatedAt: string; upcomingUntil: string; upcomingTodoCount: number; overdueTodoCount: number; undatedTodoCount: number; recentApplications: Application[]; recentInterviews: InterviewSummary[]; upcomingTodos: Todo[]; overdueTodos: Todo[] }
+export const interviewFormats: Record<string, string> = { ONLINE: '线上', OFFLINE: '线下', AI: 'AI 面' }
+export const todoKinds: Record<string, string> = { WRITTEN_TEST: '笔试', INTERVIEW: '面试', ASSESSMENT: '测评', MATERIAL: '材料提交', OFFER_DEADLINE: 'Offer 截止', OTHER: '其他' }
+export function eventTime(value: string | null) { return value ? localTime(value) : '时间未定' }
 interface Envelope<T> { code: string; message: string; data: T; errors?: {field: string; message: string}[] }
 export class ApiError extends Error {
   constructor(message: string, readonly status: number) { super(message) }

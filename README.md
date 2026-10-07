@@ -4,9 +4,9 @@
 
 ## 当前进度
 
-第一个可操作版本已完成：Vue 3 / TypeScript / Element Plus 页面连接真实 MySQL 后端，支持公司与岗位管理、投递建档、搜索分页、招聘阶段更新和完整追加历史。数据保存到 MySQL，刷新或重启后保留。
+基础 MVP 已完成：Vue 3 / TypeScript / Element Plus 页面连接真实 MySQL 后端，支持公司、岗位、投递档案与完整阶段历史、独立面试复盘、待办完成 / 重开和首页 Dashboard。数据保存到 MySQL，刷新或重启后保留。
 
-后端使用 Java 21、Spring Boot 3.5.16、MyBatis-Plus 3.5.17、MySQL、Flyway、Lombok 和 Maven Wrapper。前端生产文件随 Jar 打包，页面和 API 共用一个端口。暂未实现面试复盘、待办、完整 Dashboard、登录和 AI；默认本机使用，Redis 按实际需要启用。
+后端使用 Java 21、Spring Boot 3.5.16、MyBatis-Plus 3.5.17、MySQL、Flyway、Lombok 和 Maven Wrapper。前端生产文件随 Jar 打包，页面和 API 共用一个端口。默认本机使用，没有登录或 AI；Redis 按实际需要启用。面试 / 待办不隐式改变招聘阶段，已发生面试和未来七天截止事项分别展示。
 
 ## 本地使用
 
@@ -98,7 +98,7 @@ GET /api/v1/health 返回：
 python scripts/verify_mysql.py --mysql-bin '<MySQL 安装目录>/bin'
 ```
 
-脚本初始化自身临时 datadir 和随机测试库，使用独立 loopback 端口，完成后停止自己的实例并清理目录；不连接已有 MySQL 服务。--probe 仅验证实例启动 / 清理。52 项真实 MySQL 测试覆盖迁移、六 Mapper、外键、唯一键、状态 / 结束原因、未知日期、UTC 微秒、乐观锁、事务和工作台 HTTP 行为；加上 19 项基础 HTTP 测试，共 71 项。前端另有 6 项桌面 / 手机浏览器用例，覆盖完整操作、失败输入保留、并发冲突和断线恢复。已验证 Windows / MySQL 8.0.34；MySQL 8.4 与其他操作系统的隔离脚本尚未验证。显式 CI 测试设置要求见 [数据库说明](docs/database.md#数据库验收)。
+脚本初始化自身临时 datadir 和随机测试库，使用独立 loopback 端口，完成后停止自己的实例并清理目录；不连接已有 MySQL 服务。--probe 仅验证实例启动 / 清理。72 项真实 MySQL 测试覆盖迁移、六 Mapper、外键、唯一键、状态 / 结束原因、未知日期、UTC 微秒、乐观锁、事务和工作台 HTTP 行为；加上 19 项基础 HTTP 测试，共 91 项。前端另有 14 项桌面 / 手机浏览器用例，覆盖公司 / 投递 / 面试复盘 / 六类待办完整操作、完成重开、关联保护、失败输入保留、并发冲突和断线恢复。已验证 Windows / MySQL 8.0.34；MySQL 8.4 与其他操作系统的隔离脚本尚未验证。显式 CI 测试设置要求见 [数据库说明](docs/database.md#数据库验收)。
 
 ## 工作流入口
 
@@ -115,12 +115,13 @@ python scripts/verify_mysql.py --mysql-bin '<MySQL 安装目录>/bin'
 默认一个助手顺序承担角色，自审标为 SELF_REVIEW。角色契约不自动启动 agent；项目尚未接入业务 AI 功能。
 
 - [首个可操作版本](openspec/changes/archive/2026-10-07-deliver-application-workspace/proposal.md) 与 [验收证据](openspec/changes/archive/2026-10-07-deliver-application-workspace/processing/verification.md)。
+- [完整基础 MVP](openspec/changes/archive/2026-10-07-complete-core-mvp/proposal.md) 与 [验收证据](openspec/changes/archive/2026-10-07-complete-core-mvp/processing/verification.md)。
 
 ## 后续阶段
 
-1. 面试与待办管理，并同步页面。
-2. Dashboard 与 MVP 完整联调。
-3. 根据实际使用反馈迭代，再逐步接入 AI。
+1. 根据个人真实使用反馈完善基础体验。
+2. 明确登录 / 数据备份等需求后逐步扩展。
+3. 按独立 change 接入邮件解析、面试准备和自然语言查询等 AI 能力。
 
 **一个 change 推送 GitHub 一次**：实施、修复、审查和验证在本地完成，验收后同步规范、归档，再统一提交并普通推送。未明确的业务决定在相应 change 中复核，不重复索要已有授权。
 
