@@ -2,6 +2,8 @@
 
 当前版本支持公司、岗位、投递及阶段历史、面试复盘、六类待办和 Dashboard。默认只监听 127.0.0.1，适用于个人本机，没有登录认证。
 
+当前开发与验收仅面向电脑浏览器，默认 Playwright 只运行 desktop 项目。手机适配、手机访问和移动端测试暂不纳入工作范围；历史尺寸模拟记录保留为当时的验证证据。
+
 ## 构建完整系统
 
 需要 Java 21、Node 22.12+（推荐 24）、npm、Python 3.11+。首次需要网络下载依赖；前端使用项目锁文件。不要使用系统旧 Maven。
@@ -85,4 +87,4 @@ $env:OFFERFLOW_E2E_CHANNEL = 'chrome'
 npm test
 ```
 
-可使用已安装 Chrome / msedge；不指定 channel 时需先 npx playwright install chromium 下载测试浏览器。本次实际使用 Chrome，桌面与 iPhone 13 尺寸 / 触摸模拟均验证，未声称 Safari 或实体手机验证。浏览器测试不清空数据库，会保留虚构记录；报告、截图和失败 trace 位于被忽略的 target。最后从项目根目录执行 python scripts/run_local.py --instance browser-tests --stop。
+可使用已安装 Chrome / msedge；不指定 channel 时需先 npx playwright install chromium 下载测试浏览器。默认运行 10 个电脑端业务场景；历史 iPhone 13 尺寸 / 触摸模拟不表示实体手机或手机访问验证。浏览器测试不清空数据库，会保留虚构记录；报告、截图和失败 trace 位于被忽略的 target。最后从项目根目录执行 python scripts/run_local.py --instance browser-tests --stop。

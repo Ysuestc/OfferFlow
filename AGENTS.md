@@ -11,6 +11,7 @@ OfferFlow 是个人秋招投递管理系统。先交付简单、可维护的单�
 
 ## 实现约定
 
+- 当前只面向电脑浏览器开发与验收，优先电脑本机使用；手机适配、手机访问和移动端测试暂不纳入工作范围。
 - Java 21、Spring Boot 3、MyBatis-Plus、MySQL、Maven、Lombok；REST API、JSON、统一响应、全局异常处理、参数校验。
 - Controller 处理协议和校验，Service 处理业务及事务，Mapper 处理持久化；Entity、DTO、VO 分开。
 - 先采用单模块单体结构，不引入微服务、MQ、Elasticsearch 或没有实际用途的抽象。
