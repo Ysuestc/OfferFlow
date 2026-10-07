@@ -2,6 +2,8 @@
 
 ## 状态与已授权范围
 
+2026-10-07 add-company-type-tags 根据用户要求把六种企业类型直接展示为录入标签，支持单选高亮、手机换行和键盘操作；公司库新增 / 编辑复用控件，已有公司类型只读展示。无后端字段、依赖或迁移变化，生产构建、19 基础测试及 12 个受影响浏览器场景验证完成，见 [标签验收](../openspec/changes/archive/2026-10-07-add-company-type-tags/processing/verification.md)。
+
 2026-10-07 根据用户“新增公司投递记录怎么保存不了，怎么还要搜索”的反馈，simplify-application-entry 修复默认新增入口：直接录入公司和岗位、一次事务建立关联档案、明确匹配复用 / 歧义选择、失败保留输入，保留已有岗位和预选方式。不新增数据库字段或依赖；99 项 Java / MySQL 测试及 12 项受影响浏览器用例通过。见 [录入修复验收](../openspec/changes/archive/2026-10-07-simplify-application-entry/processing/verification.md)。
 
 基础 MVP 已实现：公司 / 岗位 / 投递 / 阶段历史、独立面试复盘、六类待办与完成 / 重开、Dashboard 及六个 Vue 导航页。前端随 Jar 打包，独占本地数据目录支持停启保留。本次 complete-core-mvp 依据用户“继续下一步，完善所有基础功能”推进；91 项 Java / MySQL 和 14 个浏览器用例通过，已归档；见 [完整 MVP 验收](../openspec/changes/archive/2026-10-07-complete-core-mvp/processing/verification.md)。

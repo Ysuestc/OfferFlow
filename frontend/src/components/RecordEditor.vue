@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { api, ApiError, companyTypes, stages, reasons, type Company, type Position, type Application, type Page } from '../api'
+import CompanyTypeTags from './CompanyTypeTags.vue'
 
 type Kind = 'company' | 'position' | 'application' | 'stage'
 const props = defineProps<{ kind: Kind; item?: Company | Position | Application; presetPosition?: Position }>()
@@ -42,6 +43,7 @@ const title = computed(() => props.kind === 'stage' ? '更新招聘阶段'
   : (props.item ? '编辑' : '新增') + ({ company: '公司', position: '岗位', application: '投递档案' }[props.kind]))
 const editingApplication = computed(() => props.kind === 'application' && !!props.item)
 const directEntry = computed(() => props.kind === 'application' && !editingApplication.value && entryMode.value === 'direct')
+const selectedCompany = computed(() => companyChoices.value.find(item => item.id === form.companyId))
 const showReason = computed(() => form.stage === 'ENDED')
 const rules = computed<FormRules>(() => ({
   name: [{ required: true, whitespace: true, message: '请填写名称', trigger: 'blur' }],
@@ -178,10 +180,8 @@ async function save() {
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="save">
       <template v-if="kind === 'company'">
         <el-form-item label="公司名称" prop="name"><el-input v-model="form.name" maxlength="255" placeholder="例如：星河科技" /></el-form-item>
-        <div class="form-grid">
-          <el-form-item label="公司类型" prop="type"><el-select v-model="form.type"><el-option v-for="(label, value) in companyTypes" :key="value" :label="label" :value="value" /></el-select></el-form-item>
-          <el-form-item label="公司官网" prop="website"><el-input v-model="form.website" maxlength="2048" placeholder="https://" /></el-form-item>
-        </div>
+        <el-form-item label="企业类型" prop="type"><CompanyTypeTags v-model="form.type" :disabled="busy" /></el-form-item>
+        <el-form-item label="公司官网" prop="website"><el-input v-model="form.website" maxlength="2048" placeholder="https://" /></el-form-item>
       </template>
       <template v-if="kind === 'position'">
         <el-form-item label="所属公司" prop="companyId">
@@ -214,10 +214,15 @@ async function save() {
             </el-select>
             <el-button link type="primary" :disabled="busy" @click="switchCompany">手动填写公司</el-button>
           </el-form-item>
+          <el-form-item label="企业类型">
+            <CompanyTypeTags v-if="!useExistingCompany" v-model="form.companyType" :disabled="busy" />
+            <el-tag v-else-if="selectedCompany">{{ companyTypes[selectedCompany.type] }}</el-tag>
+            <span v-else class="field-help">选择公司后显示企业类型。</span>
+            <span class="field-help">已有公司沿用公司库中的类型，需要修改可到公司库编辑。</span>
+          </el-form-item>
           <el-form-item label="岗位名称" prop="positionName"><el-input v-model="form.positionName" maxlength="255" placeholder="例如：Java 后端开发工程师" /></el-form-item>
           <details class="entry-details">
-            <summary>补充公司类型、地点、方向、批次和 JD（可选）</summary>
-            <el-form-item label="公司类型"><el-select v-model="form.companyType"><el-option v-for="(label, value) in companyTypes" :key="value" :label="label" :value="value" /></el-select></el-form-item>
+            <summary>补充地点、方向、批次和 JD（可选）</summary>
             <div class="form-grid">
               <el-form-item label="工作地点"><el-input v-model="form.location" maxlength="255" placeholder="例如：上海" /></el-form-item>
               <el-form-item label="岗位方向"><el-input v-model="form.direction" maxlength="128" placeholder="例如：Java 后端 / Agent" /></el-form-item>
