@@ -59,6 +59,16 @@ class HealthHttpTest {
     }
 
     @Test
+    void standaloneReportsUnavailableWorkspaceWithoutBusinessDatabaseAccess() {
+        var response = http.getForEntity("/api/v1/workspace", JsonNode.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().path("data").path("available").asBoolean()).isFalse();
+        var companies = http.getForEntity("/api/v1/companies", JsonNode.class);
+        assertThat(companies.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(companies.getBody().path("code").asText()).isEqualTo("NOT_FOUND");
+    }
+
+    @Test
     void testHelperEndpointsAreAbsentFromProductionContext() {
         var response = http.getForEntity("/contract-probe/quantity?quantity=1", JsonNode.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);

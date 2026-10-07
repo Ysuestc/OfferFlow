@@ -31,6 +31,7 @@ def verify_jar(root, database_url, username, password):
         raise RuntimeError("Expected exactly one built OfferFlow Jar")
     jar = candidates[0]
     with zipfile.ZipFile(jar) as archive:
+        bundled_frontend = "BOOT-INF/classes/static/index.html" in archive.namelist()
         if any("BOOT-INF/lib/lombok-" in name or "Test.class" in name
                or "IT.class" in name for name in archive.namelist()):
             raise RuntimeError("Development classes found in production Jar")
@@ -66,6 +67,15 @@ def verify_jar(root, database_url, username, password):
                             if response.status != 200 or json.load(response)["data"]["status"] != "UP":
                                 raise RuntimeError("Unexpected Jar health response")
                         print(f"PASS {mode} Jar HTTP health", flush=True)
+                        with urllib.request.urlopen(
+                                f"http://127.0.0.1:{port.group(1)}/api/v1/workspace", timeout=3) as response:
+                            if json.load(response)["data"]["available"] != (mode == "mysql"):
+                                raise RuntimeError("Incorrect Jar workspace mode")
+                        if bundled_frontend:
+                            with urllib.request.urlopen(f"http://127.0.0.1:{port.group(1)}/", timeout=3) as response:
+                                if response.status != 200 or "OfferFlow" not in response.read().decode("utf-8"):
+                                    raise RuntimeError("Bundled frontend entry unavailable")
+                            print(f"PASS {mode} Jar frontend and workspace mode", flush=True)
                         return
                     if process.poll() is not None:
                         raise RuntimeError(f"{mode} Jar startup failed")
@@ -128,7 +138,7 @@ def main():
         server_args = [
             str(binaries["mysqld"]), "--no-defaults",
             f"--basedir={binary_dir.parent}", f"--datadir={data}",
-            "--bind-address=127.0.0.1", f"--port={port}", "--mysqlx=0",
+            "--bind-address=127.0.0.1", f"--port={port}", "--mysqlx=0", "--skip-log-bin",
         ]
         if os.name == "nt":
             # MySQL's Windows monitor otherwise leaves a child on forced exit.
@@ -157,13 +167,16 @@ def main():
             token = uuid.uuid4().hex
             db_name = f"offerflow_it_{token}"
             migration_db = db_name + "_migration"
+            workspace_db = db_name + "_workspace"
             password = secrets.token_hex(24)
             setup = run_mysql(binaries["mysql"], port, f"""
                 CREATE DATABASE {db_name} CHARACTER SET utf8mb4;
                 CREATE DATABASE {migration_db} CHARACTER SET utf8mb4;
+                CREATE DATABASE {workspace_db} CHARACTER SET utf8mb4;
                 CREATE USER 'offerflow_test'@'127.0.0.1' IDENTIFIED BY '{password}';
                 GRANT ALL ON {db_name}.* TO 'offerflow_test'@'127.0.0.1';
                 GRANT ALL ON {migration_db}.* TO 'offerflow_test'@'127.0.0.1';
+                GRANT ALL ON {workspace_db}.* TO 'offerflow_test'@'127.0.0.1';
             """)
             if setup.returncode:
                 raise RuntimeError("Unable to prepare owned test schemas")
@@ -176,6 +189,8 @@ def main():
                     f"jdbc:mysql://127.0.0.1:{port}/{db_name}",
                 "OFFERFLOW_TEST_MIGRATION_DB_URL":
                     f"jdbc:mysql://127.0.0.1:{port}/{migration_db}",
+                "OFFERFLOW_TEST_WORKSPACE_DB_URL":
+                    f"jdbc:mysql://127.0.0.1:{port}/{workspace_db}",
                 "OFFERFLOW_TEST_DB_USERNAME": "offerflow_test",
                 "OFFERFLOW_TEST_DB_PASSWORD": password,
             })

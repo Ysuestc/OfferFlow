@@ -4,37 +4,28 @@
 
 ## 当前进度
 
-后端工程和数据库基础已建立：统一 JSON 响应、错误处理、Jakarta Validation、六表 Flyway 迁移、实体 / MyBatis-Plus Mapper，以及数据库约束和事务验证。当前 HTTP 接口为进程存活检查；公司、岗位和投递的业务接口按后续阶段开发。
+第一个可操作版本已完成：Vue 3 / TypeScript / Element Plus 页面连接真实 MySQL 后端，支持公司与岗位管理、投递建档、搜索分页、招聘阶段更新和完整追加历史。数据保存到 MySQL，刷新或重启后保留。
 
-当前使用 Java 21、Spring Boot 3.5.16、MyBatis-Plus 3.5.17、MySQL、Flyway、Lombok、Maven Wrapper 3.3.4 / Maven 3.9.16。Redis 按实际用途启用，后续前端考虑 Vue 3、TypeScript、Element Plus。数据关系、字段、时间和状态约束见 [数据库说明](docs/database.md)。
+后端使用 Java 21、Spring Boot 3.5.16、MyBatis-Plus 3.5.17、MySQL、Flyway、Lombok 和 Maven Wrapper。前端生产文件随 Jar 打包，页面和 API 共用一个端口。暂未实现面试复盘、待办、完整 Dashboard、登录和 AI；默认本机使用，Redis 按实际需要启用。
 
-## 本地运行
+## 本地使用
 
-需要 JDK 21，设置 JAVA_HOME 或确保 java 在 PATH 中。首次构建需要网络，Wrapper 自动获取固定版本 Maven；无需使用系统 Maven。
-
-Windows PowerShell：
+构建需要 JDK 21、Node 22.12+（推荐 24）、npm 和 Python 3.11+；使用打包 Jar 仅需 Java 和 MySQL。
 
 ```powershell
-.\mvnw.cmd -B -ntp verify
-.\mvnw.cmd spring-boot:run
+python scripts/build.py
+python scripts/run_local.py --mysql-bin '<MySQL 安装目录>/bin'
 ```
 
-macOS / Linux：
+打开 http://127.0.0.1:8080，先添加公司和岗位，再建立投递。辅助脚本使用自己的 MySQL 实例，不修改已有服务；数据保留在被忽略的 private-data/local。停止可以按 Ctrl+C 或执行：
 
-```bash
-./mvnw -B -ntp verify
-./mvnw spring-boot:run
+```powershell
+python scripts/run_local.py --stop
 ```
 
-打包后也可以直接运行：
+再次启动复用原数据。重建前先停止实例，避免 Windows 的运行文件锁。系统 Node 较旧时可给 build.py 指定 --node '<Node executable>'，无需更改全局安装。
 
-```bash
-java -jar target/offerflow-0.1.0-SNAPSHOT.jar
-```
-
-默认地址为 http://127.0.0.1:8080。SERVER_ADDRESS / SERVER_PORT 环境变量可覆盖监听地址和端口。默认 standalone profile 不需要 MySQL 或 Redis。
-
-运行数据库模式前，准备空 MySQL 数据库和有迁移权限的专用账户。配置环境变量后选择 mysql profile：
+使用已有专用空 MySQL 数据库：
 
 ```powershell
 $env:DB_URL = 'jdbc:mysql://127.0.0.1:3306/offerflow'
@@ -43,11 +34,16 @@ $env:DB_PASSWORD = '<本地配置的数据库密码>'
 java -jar target/offerflow-0.1.0-SNAPSHOT.jar --spring.profiles.active=mysql
 ```
 
-选择 standalone 或 mysql 其中一个模式。mysql 强制 UTC 连接并启用 Flyway，首次建立六张业务表，随后校验迁移；连接 / 校验失败会阻止启动。账户由使用者准备，不默认使用 root；真实密码不写入仓库。Flyway 禁止 clean 和自动 baseline，已使用迁移不修改，后续追加新版本。
+账户由使用者准备，不默认使用 root。Flyway 首次建立六张业务表，之后校验迁移，连接 / 校验失败阻止启动；禁止 clean 和自动 baseline，已使用迁移不修改。默认仅 loopback，未实现认证，不直接开放公网。
+
+后端基础验证和无需数据库的存活模式：
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
+.\mvnw.cmd -B -ntp verify
+.\mvnw.cmd spring-boot:run
 ```
+
+默认 standalone 仅提供健康检查和业务模式说明，不提供持久化业务。其他平台使用 ./mvnw。详细构建、前端开发、数据目录与浏览器测试见 [本地开发说明](docs/local-development.md)；接口见 [API 文档](docs/api.md)，模型见 [数据库说明](docs/database.md)。
 
 ## HTTP 基础合同
 
@@ -74,7 +70,7 @@ GET /api/v1/health 返回：
 }
 ```
 
-校验示例用于解释公共合同，当前没有公司创建接口。测试辅助端点仅存在于测试源码，不进入生产 Jar。
+公司创建接口等业务接口使用此公共合同。测试辅助端点仅存在于测试源码，不进入生产 Jar。
 
 | HTTP | code | 语义 |
 |---|---|---|
@@ -102,7 +98,7 @@ GET /api/v1/health 返回：
 python scripts/verify_mysql.py --mysql-bin '<MySQL 安装目录>/bin'
 ```
 
-脚本初始化自身临时 datadir 和随机测试库，使用独立 loopback 端口，完成后停止自己的实例并清理目录；不连接已有 MySQL 服务。--probe 仅验证实例启动 / 清理。40 项 MySQL 测试覆盖迁移、六 Mapper、外键、唯一键、状态 / 结束原因、未知日期、UTC 微秒、乐观锁和事务；加上 18 项 HTTP 测试，共 58 项，均无失败或跳过。已验证 Windows / MySQL 8.0.34；MySQL 8.4 与其他操作系统的隔离脚本尚未验证。显式 CI 测试设置要求见 [数据库说明](docs/database.md#数据库验收)。
+脚本初始化自身临时 datadir 和随机测试库，使用独立 loopback 端口，完成后停止自己的实例并清理目录；不连接已有 MySQL 服务。--probe 仅验证实例启动 / 清理。52 项真实 MySQL 测试覆盖迁移、六 Mapper、外键、唯一键、状态 / 结束原因、未知日期、UTC 微秒、乐观锁、事务和工作台 HTTP 行为；加上 19 项基础 HTTP 测试，共 71 项。前端另有 6 项桌面 / 手机浏览器用例，覆盖完整操作、失败输入保留、并发冲突和断线恢复。已验证 Windows / MySQL 8.0.34；MySQL 8.4 与其他操作系统的隔离脚本尚未验证。显式 CI 测试设置要求见 [数据库说明](docs/database.md#数据库验收)。
 
 ## 工作流入口
 
@@ -118,12 +114,13 @@ python scripts/verify_mysql.py --mysql-bin '<MySQL 安装目录>/bin'
 
 默认一个助手顺序承担角色，自审标为 SELF_REVIEW。角色契约不自动启动 agent；项目尚未接入业务 AI 功能。
 
+- [首个可操作版本](openspec/changes/archive/2026-10-07-deliver-application-workspace/proposal.md) 与 [验收证据](openspec/changes/archive/2026-10-07-deliver-application-workspace/processing/verification.md)。
+
 ## 后续阶段
 
-1. 公司与岗位管理。
-2. 投递与阶段历史。
-3. 待办与面试管理。
-4. Dashboard 和 MVP 联调。
+1. 面试与待办管理，并同步页面。
+2. Dashboard 与 MVP 完整联调。
+3. 根据实际使用反馈迭代，再逐步接入 AI。
 
 **一个 change 推送 GitHub 一次**：实施、修复、审查和验证在本地完成，验收后同步规范、归档，再统一提交并普通推送。未明确的业务决定在相应 change 中复核，不重复索要已有授权。
 

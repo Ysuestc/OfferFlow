@@ -49,15 +49,15 @@ submitted 独立记录是否实际投递，日期未知时仍可为 true。数�
 
 REJECTED 仅指企业拒绝。主动拒绝 Offer、接受 Offer、撤回、岗位关闭分别使用 ENDED + 对应原因；其他结束用 OTHER，并在备注中说明。快照和历史都检查：ENDED 必须有有效原因，其他阶段不能带结束原因。
 
-CHECK 使用 CAST AS BINARY 精确比较代码，拒绝错误大小写、未知代码与尾随空格；布尔值限定 0 / 1，version 不得为负，未完成 Todo 不得有完成时间。名称长度、官网 URL、请求中的必填校验和状态推进规则在业务 DTO / Service 阶段实现。
+CHECK 使用 CAST AS BINARY 精确比较代码，拒绝错误大小写、未知代码与尾随空格；布尔值限定 0 / 1，version 不得为负，未完成 Todo 不得有完成时间。名称长度、官网 URL、请求必填和手动阶段规则已在工作台 DTO / Service 实现，见 [API 文档](api.md)。
 
 ## 时间和更新
 
 投递 / 阶段日期用 LocalDate / DATE；面试、待办和审计时刻用 Instant / UTC DATETIME(6)，精度为微秒。Hikari 通过 connectionTimeZone=UTC、forceConnectionTimeZoneToSession=true 和 preserveInstants=true 固定连接时区；具体含义见 [Connector/J 官方说明](https://dev.mysql.com/doc/connector-j/en/connector-j-connp-props-datetime-types-processing.html)。未知日期或时刻保存 NULL，不填入当前时间。
 
-Application 的 version 配合 MyBatis-Plus 乐观锁；过期版本更新影响 0 行，后续 Service 将其转换为业务冲突。currentStageOn / endReason 明确允许更新为 NULL；后续 Service 应先读取完整快照并携带 version 更新，不能直接把不完整 DTO 当实体更新。其他字段的 PATCH / 清空合同在相应 API change 定义。
+Application 的 version 配合 MyBatis-Plus 乐观锁；过期版本更新影响 0 行，工作台 Service 将其转换为 409 业务冲突。currentStageOn / endReason 明确允许更新为 NULL；阶段 Service 先读取完整快照并携带 version 更新，不直接把不完整 DTO 当实体更新。投递元信息 PUT 使用显式 SET 清空渠道、日期和备注，携带 version；无 PATCH 接口。
 
-显式 Spring 事务可以把快照与历史一起提交或回滚。当前只有持久化基础，阶段推进、补录、纠正和请求幂等尚未提供业务入口；不能仅凭 Mapper 更新就声称完整状态历史已经自动维护。
+显式 Spring 事务可以把快照与历史一起提交或回滚。工作台已实现创建档案时的初始历史，以及有效手动阶段变化时的事务历史追加；同版本相同阶段快照请求不重复追加，过期版本为 409。独立历史补录 / 修改 / 删除与通用请求幂等尚未实现。
 
 ## 索引与迁移
 
@@ -71,7 +71,7 @@ Application 的 version 配合 MyBatis-Plus 乐观锁；过期版本更新影响
 
 ## 数据库验收
 
-普通 Maven Wrapper verify 执行 18 项 HTTP 测试并打包，不需要数据库。真实 SQL 验证执行 mysql-integration profile：40 项测试覆盖迁移 / 校验、六 Mapper、唯一键、外键、结束原因、NULL、UTC / 微秒、乐观锁、事务提交与回滚。
+普通 Maven Wrapper verify 执行 19 项 HTTP 测试并打包，不需要数据库。真实 SQL 验证执行 mysql-integration profile：52 项测试覆盖迁移 / 校验、六 Mapper、唯一键、外键、结束原因、NULL、UTC / 微秒、乐观锁、事务提交与回滚，以及工作台真实 HTTP / 资料管理 / 并发 / 历史失败回滚。
 
 推荐运行 [隔离脚本](../scripts/verify_mysql.py)：
 
@@ -79,6 +79,8 @@ Application 的 version 配合 MyBatis-Plus 乐观锁；过期版本更新影响
 python scripts/verify_mysql.py --mysql-bin '<MySQL 安装目录>/bin'
 ```
 
-需要 Python 3.11+、Java 21 和 MySQL 的 mysqld / mysql / mysqladmin；Python 脚本只使用标准库。脚本初始化自身临时实例，在独立 loopback 端口创建两个随机测试库，使用随机凭据执行 Wrapper、测试和 mysql / standalone Jar 检查，随后关闭并清理。--probe 只检查实例启动 / 清理，不执行业务测试。Windows 流程已实际验证；其他操作系统的脚本入口尚未验证，mysqld 必须在符合该系统运行要求的账户下启动。
+需要 Python 3.11+、Java 21 和 MySQL 的 mysqld / mysql / mysqladmin；Python 脚本只使用标准库。脚本初始化自身临时实例，在独立 loopback 端口创建三个随机测试库，使用随机凭据执行 Wrapper、测试和 mysql / standalone Jar 检查，随后关闭并清理。--probe 只检查实例启动 / 清理，不执行业务测试。Windows 流程已实际验证；其他操作系统的脚本入口尚未验证，mysqld 必须在符合该系统运行要求的账户下启动。
 
-已有 CI 专用实例可显式设置 OFFERFLOW_TEST_DB_URL、OFFERFLOW_TEST_MIGRATION_DB_URL、OFFERFLOW_TEST_DB_USERNAME、OFFERFLOW_TEST_DB_PASSWORD，运行 Wrapper -Pmysql-integration verify。两个 URL 必须为不同的、新建空库，以 offerflow_it_ 开头，不能含凭据或附加参数；账号对这两个测试库需要迁移权限。不存在这些显式设置、URL 不是测试库或库已有表时，测试拒绝访问业务表。不能对个人数据库运行这些测试。
+已有 CI 专用实例可显式设置 OFFERFLOW_TEST_DB_URL、OFFERFLOW_TEST_MIGRATION_DB_URL、OFFERFLOW_TEST_WORKSPACE_DB_URL、OFFERFLOW_TEST_DB_USERNAME、OFFERFLOW_TEST_DB_PASSWORD，运行 Wrapper -Pmysql-integration verify。三个 URL 必须为不同的、新建空库，以 offerflow_it_ 开头，不能含凭据或附加参数；账号对这三个测试库需要迁移权限。不存在这些显式设置、URL 不是测试库或库已有表时，测试拒绝访问业务表。不能对个人数据库运行这些测试。
+
+工作台回滚用例在专用 schema 创建临时失败触发器。隔离脚本只对自建实例禁用 binlog；使用 CI 专用实例时须准备触发器创建权限和该实例的 log_bin_trust_function_creators 设置，或在该专用实例禁用 binlog，不调整个人 / 生产数据库。

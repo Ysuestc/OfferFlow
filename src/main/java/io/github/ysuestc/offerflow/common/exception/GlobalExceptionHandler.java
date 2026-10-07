@@ -1,6 +1,7 @@
 package io.github.ysuestc.offerflow.common.exception;
 
 import java.util.Comparator;
+import java.sql.SQLException;
 
 import io.github.ysuestc.offerflow.common.api.ApiErrorCode;
 import io.github.ysuestc.offerflow.common.api.ApiResponse;
@@ -8,6 +9,7 @@ import io.github.ysuestc.offerflow.common.api.FieldViolation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +36,24 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         }
         return ResponseEntity.status(code.status())
                 .body(ApiResponse.failure(code, exception.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIntegrityException(DataIntegrityViolationException exception) {
+        Throwable cause = exception.getMostSpecificCause();
+        if (cause instanceof SQLException sql) {
+            String message = switch (sql.getErrorCode()) {
+                case 1062 -> "该岗位已有投递档案，请打开已有档案";
+                case 1451 -> "该记录已被引用，请先处理关联记录";
+                case 1452 -> "关联记录已发生变化，请刷新后重试";
+                default -> null;
+            };
+            if (message != null) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(ApiResponse.failure(ApiErrorCode.CONFLICT, message));
+            }
+        }
+        return handleUnexpectedException(exception);
     }
 
     @ExceptionHandler(Exception.class)

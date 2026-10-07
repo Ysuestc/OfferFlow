@@ -18,6 +18,16 @@ record MySqlTestSettings(Database primary, Database migration) {
         return new MySqlTestSettings(primary, migration);
     }
 
+    static Database workspace() {
+        MySqlTestSettings settings = fromEnvironment();
+        Database database = database("OFFERFLOW_TEST_WORKSPACE_DB_URL",
+                required("OFFERFLOW_TEST_DB_USERNAME"), required("OFFERFLOW_TEST_DB_PASSWORD"));
+        if (database.url().equals(settings.primary().url()) || database.url().equals(settings.migration().url())) {
+            throw new IllegalStateException("Workspace tests require a third distinct dedicated schema");
+        }
+        return database;
+    }
+
     private static String required(String key) {
         String value = System.getenv(key);
         if (value == null || value.isBlank()) {
