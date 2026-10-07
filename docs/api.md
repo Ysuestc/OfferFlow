@@ -113,3 +113,23 @@ GET /api/v1/dashboard 返回：
 - upcomingTodos / overdueTodos：对应窗口的未完成待办，各最多 5 条；总数可能大于列表长度。
 
 所有最近列表最多 5 条，未知日期不猜测；响应采用统一 JSON 合同，首页加载失败可重试。默认仅 mysql 模式提供业务接口，standalone 不提供。
+
+## 邮箱采集
+
+仅 mysql profile、单邮箱、默认 loopback，无登录认证。邮箱响应 Cache-Control: no-store。
+
+| 方法 | 路径 | 行为 |
+|---|---|---|
+| GET / PUT | /api/v1/mailbox | 安全设置 / 保存，首次 GET data=null |
+| POST | /api/v1/mailbox/connection-tests | 测试保存的账号与文件夹，只读 TLS |
+| POST | /api/v1/mailbox/syncs | 手动采集一批，最多扫描 100 封 |
+| GET | /api/v1/mailbox/messages | q 匹配主题 / 发件人，分页摘要，无正文 |
+| GET | /api/v1/mailbox/messages/{id} | mail 摘要与 bodyText 纯文本详情 |
+
+PUT：email 必填 254，后缀与 provider=NETEASE_163/NETEASE_126/NETEASE_YEAH 对应；folder 必填 128，无控制字符；syncFrom 必填带时区 ISO-8601，不得为将来；authorizationCode 最多 128，去除空白后 8—128 字母数字，首次必填，后续空则保留；version 非负，首次 0，保存成功递增。响应不含授权码、密文、密钥或游标。已有邮件后禁止改身份 / 文件夹 / 起点，仍可换授权码。
+
+设置 VO 还含 credentialConfigured、identityLocked、busy、version、lastStatus、lastAttemptAt、lastSuccessAt、lastError、lastImported、messageCount。lastStatus=NEVER/RUNNING/SUCCESS/PARTIAL/FAILED；RUNNING 且 busy=false 表示上次中断，不阻止重试。lastSuccessAt 仅完整批次成功时更新，不代表已采集所有后续邮件。
+
+操作 data={status, imported, scanned, hasMore, errorCode, message}；测试成功 status=CONNECTED，同步为 SUCCESS/PARTIAL/FAILED。已执行操作的外部失败返回 HTTP 200 + 显式失败结果；错误类别 AUTHENTICATION/FOLDER/NETWORK/CONTENT/STORAGE/CREDENTIAL，不透传协议异常原文。格式错误 400；未设置 404；忙、旧版本或被冻结字段修改 409；无法访问本地数据库时可为 500。普通 HTTP 错误沿用公共合同。
+
+列表 page / size / q 沿用公共限制，字面量 LIKE，按本地 id DESC；摘要含字符串 id、subject、sender、receivedAt、sentAt、contentStatus、bodyTruncated；详情无附件或原始 HTML。contentStatus=AVAILABLE/TOO_LARGE，未知时间 NULL，正文最多 20000 字符。重复同步与 UID 重建时相同内容不重复建记录；邮件与游标同事务保存，失败不越过未提交项。当前不改变任何投递、历史、面试或待办。

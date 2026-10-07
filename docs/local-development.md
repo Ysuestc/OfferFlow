@@ -87,4 +87,18 @@ $env:OFFERFLOW_E2E_CHANNEL = 'chrome'
 npm test
 ```
 
-可使用已安装 Chrome / msedge；不指定 channel 时需先 npx playwright install chromium 下载测试浏览器。默认运行 10 个电脑端业务场景；历史 iPhone 13 尺寸 / 触摸模拟不表示实体手机或手机访问验证。浏览器测试不清空数据库，会保留虚构记录；报告、截图和失败 trace 位于被忽略的 target。最后从项目根目录执行 python scripts/run_local.py --instance browser-tests --stop。
+可使用已安装 Chrome / msedge；不指定 channel 时需先 npx playwright install chromium 下载测试浏览器。默认运行 13 个电脑端场景；邮箱页面测试真实保存虚构配置，连接 / 同步及邮件样本响应由浏览器拦截，不连接真实网易账号。历史 iPhone 13 尺寸 / 触摸模拟不表示实体手机或手机访问验证。浏览器测试不清空数据库，会保留虚构记录；报告、截图和失败 trace 位于被忽略的 target。最后从项目根目录执行 python scripts/run_local.py --instance browser-tests --stop。
+
+## 网易邮箱接入
+
+进入“邮件同步”，选择免费 163 / 126 / yeah 类型，填写邮箱、客户端授权码、文件夹（默认 INBOX）和首次采集起点。时间按电脑本机时区输入。先保存，再点击“测试连接”，成功后点击“立即同步”。本阶段没有定时任务，需要手动同步。
+
+在网易网页版邮箱“设置 → POP/SMTP/IMAP”开启 IMAP，按账号要求验证后生成单独的客户端授权码，不能填网页登录密码。具体步骤见 [网易官方帮助](https://help.mail.126.com/faqDetail.do?code=d7a5dc8471cd0c0e8b4b8f4f8e49998b374173cfe9171305fa1ce630d7f67ac2a5feb28b66796d3b)。VIP / 企业邮箱不在当前范围。
+
+授权码以 AES-GCM 密文保存于数据库，页面仅显示是否已配置；编辑留空保留，填新值替换。辅助实例密钥在 private-data/<instance>/mailbox/mail.key，各实例独立；直接运行 Jar 默认 private-data/mailbox，也可设置 OFFERFLOW_MAILBOX_PRIVATE_DIR 为自己的私有目录。密钥目录须可写；Linux 密钥创建为 600，Windows 使用本机目录权限。备份须同时保留数据库与密钥，不放入公开仓库。密钥丢失可重新填写授权码保存；密钥损坏先恢复备份，或停止实例后移除损坏密钥，再重新配置授权码。已有邮件不受授权码更换影响。
+
+每次最多扫描 100 封，提示有更多时再次同步。只采集起点之后的邮件，不改变已读 / 删除标记。按 UID 元组及内容摘要去重；UID 有效性改变时重新扫描。服务端改写邮件头可能被视作新内容，当前不承诺跨邮箱语义去重。网络 / 保存失败保留已提交邮件和进度，再次同步可恢复；上次运行中断也可重新同步。
+
+正文以纯文本显示，不加载远程图片或执行 HTML；附件与转发邮件附件不解析。超过 2 MiB 只保存邮件头，正文超过 20000 字符截断并提示，可到网易邮箱查看完整内容。已有采集邮件后，邮箱、提供商、文件夹和起点不能更换，只能更新授权码，避免混淆不同来源的游标。
+
+新增 V3 不改写 V1 / V2，正常启动自动迁移并保留求职记录。已验证本地 GreenMail TLS / IMAP、真实 MySQL；真实网易端到端联调 NOT_RUN，用户在本机配置后可通过连接测试核实账号权限。采集不会更新阶段、面试或待办。

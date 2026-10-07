@@ -2,6 +2,7 @@ package io.github.ysuestc.offerflow.persistence;
 
 import java.net.URI;
 import java.util.Properties;
+import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
@@ -45,6 +46,15 @@ record MySqlTestSettings(Database primary, Database migration) {
                 || database.url().equals(workspace.url())) {
             throw new IllegalStateException("MVP tests require a fourth distinct dedicated schema");
         }
+        return database;
+    }
+
+    static Database mailbox() {
+        var settings = fromEnvironment();
+        var database = database("OFFERFLOW_TEST_MAILBOX_DB_URL",
+                required("OFFERFLOW_TEST_DB_USERNAME"), required("OFFERFLOW_TEST_DB_PASSWORD"));
+        if (List.of(settings.primary().url(), settings.migration().url(), workspace().url(), mvp().url()).contains(database.url()))
+            throw new IllegalStateException("Mailbox tests require a fifth distinct dedicated schema");
         return database;
     }
 

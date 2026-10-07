@@ -1,6 +1,6 @@
 # 数据库与持久化模型
 
-当前提供六表 V1、追加 V2，以及公司 / 岗位 / 投递 / 面试 / 待办 CRUD 和 Dashboard。模型使用单用户关系；没有 user_id、逻辑删除或 AI 扩展表。
+当前提供六表 V1、追加 V2 和邮箱采集 V3，以及求职 CRUD、Dashboard 和手动邮件采集。单用户模型，没有 user_id、逻辑删除或预建 AI 扩展表。
 
 ## ER 关系
 
@@ -12,6 +12,7 @@ erDiagram
     Application ||--o{ Interview : has
     Application ||--o{ Todo : has
     Interview o|--o{ Todo : optionally_links
+    MailboxAccount ||--o{ MailMessage : collects
 ```
 
 同一具体岗位最多一份投递档案；官网和内推等重复渠道记录主要渠道，其余入口可写备注。不同年份 / 招聘批次使用独立 JobPosition，保留各自 JD；公司名、岗位名不设置唯一键。
@@ -70,13 +71,13 @@ Application 的 version 配合 MyBatis-Plus 乐观锁；过期版本更新影响
 
 Dashboard 单个 REPEATABLE_READ 只读事务使用同一次 UTC Clock 时刻，七天为 [now, now+7天)，逾期为 dueAt < now，均只包含未完成事项；未知不入时间窗口。统计口径见 [API](api.md)。
 
-[初始迁移](../src/main/resources/db/migration/V1__initialize_core_tables.sql)只建业务表，不创建数据库、账户或求职数据。Flyway 自动校验 checksum，禁用 clean 和自动 baseline；V1 投入使用后不可改动，变化追加 V2。MySQL DDL 不保证事务回滚，迁移失败应排查具体状态，不自动删除现有数据。
+[初始迁移](../src/main/resources/db/migration/V1__initialize_core_tables.sql)只建业务表，不创建数据库、账户或求职数据。Flyway 自动校验 checksum，禁用 clean 和自动 baseline；V1 投入使用后不可改动，变化追加新迁移。MySQL DDL 不保证事务回滚，迁移失败应排查具体状态，不自动删除现有数据。
 
 迁移依赖 MySQL 8 的 utf8mb4_0900_ai_ci 和执行中的 CHECK，最低版本 8.0.16；CHECK 版本行为见 [MySQL 官方手册](https://dev.mysql.com/doc/refman/8.0/en/create-table-check-constraints.html)。本次真实验证 MySQL 8.0.34，8.4 尚未运行验证。
 
 ## 数据库验收
 
-普通 Maven Wrapper verify 执行 19 项 HTTP 测试并打包，不需要数据库。真实 SQL 验证执行 mysql-integration profile：72 项测试覆盖 V1 → V2 升级 / 校验、六 Mapper、唯一键、外键、结束原因、NULL、UTC / 微秒、乐观锁、事务提交与回滚，以及公司 / 投递 / 面试 / 待办 HTTP、并发 / 历史失败回滚和 Dashboard 固定时钟边界。
+普通 Maven Wrapper verify 执行 30 项基础与邮箱测试并打包，不需要数据库。真实 SQL 验证执行 mysql-integration profile：89 项测试覆盖 V1 → V2 升级 / 校验、六 Mapper、唯一键、外键、结束原因、NULL、UTC / 微秒、乐观锁、事务提交与回滚，以及公司 / 投递 / 面试 / 待办 HTTP、并发 / 历史失败回滚和 Dashboard 固定时钟边界。
 
 推荐运行 [隔离脚本](../scripts/verify_mysql.py)：
 
@@ -84,8 +85,26 @@ Dashboard 单个 REPEATABLE_READ 只读事务使用同一次 UTC Clock 时刻，
 python scripts/verify_mysql.py --mysql-bin '<MySQL 安装目录>/bin'
 ```
 
-需要 Python 3.11+、Java 21 和 MySQL 的 mysqld / mysql / mysqladmin；Python 脚本只使用标准库。脚本初始化自身临时实例，在独立 loopback 端口创建四个随机测试库，使用随机凭据执行 Wrapper、测试和 mysql / standalone Jar 检查，随后关闭并清理。--probe 只检查实例启动 / 清理，不执行业务测试。Windows 流程已实际验证；其他操作系统的脚本入口尚未验证，mysqld 必须在符合该系统运行要求的账户下启动。
+需要 Python 3.11+、Java 21 和 MySQL 的 mysqld / mysql / mysqladmin；Python 脚本只使用标准库。脚本初始化自身临时实例，在独立 loopback 端口创建五个随机测试库，使用随机凭据执行 Wrapper、测试和 mysql / standalone Jar 检查，随后关闭并清理。--probe 只检查实例启动 / 清理，不执行业务测试。Windows 流程已实际验证；其他操作系统的脚本入口尚未验证，mysqld 必须在符合该系统运行要求的账户下启动。
 
-已有 CI 专用实例可显式设置 OFFERFLOW_TEST_DB_URL、OFFERFLOW_TEST_MIGRATION_DB_URL、OFFERFLOW_TEST_WORKSPACE_DB_URL、OFFERFLOW_TEST_MVP_DB_URL、OFFERFLOW_TEST_DB_USERNAME、OFFERFLOW_TEST_DB_PASSWORD，运行 Wrapper -Pmysql-integration verify。四个 URL 必须为不同的、新建空库，以 offerflow_it_ 开头，不能含凭据或附加参数；账号对这四个测试库需要迁移权限。不存在这些显式设置、URL 不是测试库或库已有表时，测试拒绝访问业务表。不能对个人数据库运行这些测试。
+已有 CI 专用实例可显式设置 OFFERFLOW_TEST_DB_URL、OFFERFLOW_TEST_MIGRATION_DB_URL、OFFERFLOW_TEST_WORKSPACE_DB_URL、OFFERFLOW_TEST_MVP_DB_URL、OFFERFLOW_TEST_MAILBOX_DB_URL、OFFERFLOW_TEST_DB_USERNAME、OFFERFLOW_TEST_DB_PASSWORD，运行 Wrapper -Pmysql-integration verify。五个 URL 必须为不同的、新建空库，以 offerflow_it_ 开头，不能含凭据或附加参数；账号对这五个测试库需要迁移权限。不存在这些显式设置、URL 不是测试库或库已有表时，测试拒绝访问业务表。不能对个人数据库运行这些测试。
 
 工作台回滚用例在专用 schema 创建临时失败触发器。隔离脚本只对自建实例禁用 binlog；使用 CI 专用实例时须准备触发器创建权限和该实例的 log_bin_trust_function_creators 设置，或在该专用实例禁用 binlog，不调整个人 / 生产数据库。
+
+
+## 邮箱采集 V3
+
+[V3](../src/main/resources/db/migration/V3__add_mailbox_collection.sql) 追加两表，与六张求职表分离，不修改它们的数据或既有迁移。
+
+| 表 | 字段与用途 |
+|---|---|
+| mailbox_account | 固定 id=1；email / provider / folder / sync_from 表示来源与采集起点；credential VARBINARY(1024) 仅保存 AES-GCM 密文 |
+| mailbox_account | uid_validity / last_uid 同时 NULL 或合法非负进度；last_status、last_attempt_at、last_success_at、last_error、last_imported 表示最近同步结果；version 保护配置编辑 |
+| mail_message | account_id 外键 RESTRICT；uid_validity / uid 为原采集标识；fingerprint CHAR(64) 为有界内容摘要；账号 / UID 元组及账号 / 摘要各有唯一键 |
+| mail_message | message_id、subject、sender、received_at、sent_at 表示必要邮件头；body_text 纯文本，content_status=AVAILABLE/TOO_LARGE、body_truncated 表示内容边界；账号 / id 索引用于分页 |
+
+所有时间仍为 UTC / DATETIME(6)，未知邮件时间为 NULL。正文上限 20000 字符；超过 2 MiB 的邮件只保留头部。原始 MIME、附件、授权码明文和密钥不入库；密钥位于被忽略的私有实例目录。字段存在是当前采集能力需要，不预建邮件识别事件或任意 AI JSON。
+
+设置 version 只在用户保存时递增；游标更新不使配置表单过期。同步逐条提交邮件及游标，失败同事务回滚，已提交条目保留。服务端 UID 有效性变化触发重新扫描，相同摘要不重复入库。进程内互斥适用于当前单实例，不是分布式锁。
+
+新 mailbox 测试库与其余四个库独立；9 项 MySQL 邮箱测试验证加密 / 仅写响应、配置、UID 去重、字面量搜索、六表不变、游标失败回滚、网络恢复、丢失密钥、并发及 SQL 约束。3 项密钥、4 项 MIME、4 项 GreenMail TLS 单测验证内容与协议；真实网易联调 NOT_RUN。

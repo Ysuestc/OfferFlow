@@ -22,3 +22,7 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
+
+offerflow:
+  mailbox:
+    private-dir: ${OFFERFLOW_MAILBOX_PRIVATE_DIR:private-data/mailbox}

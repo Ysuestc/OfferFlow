@@ -167,7 +167,8 @@ def main():
                 temporary.replace(config_path)
             environment = {key: value for key, value in os.environ.items() if not key.startswith("SPRING_")}
             environment.update(DB_URL=f"jdbc:mysql://127.0.0.1:{db_port}/offerflow",
-                               DB_USERNAME="offerflow_app", DB_PASSWORD=config["appPassword"])
+                               DB_USERNAME="offerflow_app", DB_PASSWORD=config["appPassword"],
+                               OFFERFLOW_MAILBOX_PRIVATE_DIR=str(root / "mailbox"))
             app_process = subprocess.Popen(["java", "-jar", str(jar), "--spring.profiles.active=mysql",
                     "--server.address=127.0.0.1", f"--server.port={args.port}"], cwd=WORKSPACE, env=environment,
                     stdout=app_log, stderr=subprocess.STDOUT, creationflags=WINDOWS_FLAGS)
