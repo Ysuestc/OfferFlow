@@ -4,9 +4,9 @@
 
 ## 当前进度
 
-首个开发 change `initialize-backend-foundation` 提供可运行的单体后端工程、统一 JSON 响应、错误处理、Jakarta Validation 支持和进程存活接口。公司、岗位、投递等业务能力按后续阶段开发。
+后端工程和数据库基础已建立：统一 JSON 响应、错误处理、Jakarta Validation、六表 Flyway 迁移、实体 / MyBatis-Plus Mapper，以及数据库约束和事务验证。当前 HTTP 接口为进程存活检查；公司、岗位和投递的业务接口按后续阶段开发。
 
-当前使用 Java 21、Spring Boot 3.5.16、Maven Wrapper 3.3.4 / Maven 3.9.16。MyBatis-Plus、MySQL、Flyway 和实体工具在对应模块加入，Redis 按实际用途启用。后续前端考虑 Vue 3、TypeScript、Element Plus。
+当前使用 Java 21、Spring Boot 3.5.16、MyBatis-Plus 3.5.17、MySQL、Flyway、Lombok、Maven Wrapper 3.3.4 / Maven 3.9.16。Redis 按实际用途启用，后续前端考虑 Vue 3、TypeScript、Element Plus。数据关系、字段、时间和状态约束见 [数据库说明](docs/database.md)。
 
 ## 本地运行
 
@@ -32,7 +32,18 @@ macOS / Linux：
 java -jar target/offerflow-0.1.0-SNAPSHOT.jar
 ```
 
-默认地址为 http://127.0.0.1:8080。SERVER_ADDRESS / SERVER_PORT 环境变量可覆盖监听地址和端口。当前阶段启动不需要 MySQL 或 Redis。
+默认地址为 http://127.0.0.1:8080。SERVER_ADDRESS / SERVER_PORT 环境变量可覆盖监听地址和端口。默认 standalone profile 不需要 MySQL 或 Redis。
+
+运行数据库模式前，准备空 MySQL 数据库和有迁移权限的专用账户。配置环境变量后选择 mysql profile：
+
+```powershell
+$env:DB_URL = 'jdbc:mysql://127.0.0.1:3306/offerflow'
+$env:DB_USERNAME = 'offerflow_app'
+$env:DB_PASSWORD = '<本地配置的数据库密码>'
+java -jar target/offerflow-0.1.0-SNAPSHOT.jar --spring.profiles.active=mysql
+```
+
+选择 standalone 或 mysql 其中一个模式。mysql 强制 UTC 连接并启用 Flyway，首次建立六张业务表，随后校验迁移；连接 / 校验失败会阻止启动。账户由使用者准备，不默认使用 root；真实密码不写入仓库。Flyway 禁止 clean 和自动 baseline，已使用迁移不修改，后续追加新版本。
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8080/api/v1/health
@@ -85,7 +96,13 @@ GET /api/v1/health 返回：
 - Spring MVC 测试覆盖成功响应、DTO 与方法约束、绑定错误、协议错误、业务异常和错误信息隔离。
 - 随机端口 HTTP 测试覆盖实际存活、404、405、406，以及测试辅助接口未暴露。
 
-当前没有数据库，因此这些测试不代表 MySQL 事务或约束验证；数据库 change 使用独立 MySQL 测试环境。
+真实 MySQL 验证需要 Python 3.11+ 和 mysqld / mysql / mysqladmin 二进制。隔离脚本自动运行 mysql-integration verify，再检查可执行 Jar：
+
+```powershell
+python scripts/verify_mysql.py --mysql-bin '<MySQL 安装目录>/bin'
+```
+
+脚本初始化自身临时 datadir 和随机测试库，使用独立 loopback 端口，完成后停止自己的实例并清理目录；不连接已有 MySQL 服务。--probe 仅验证实例启动 / 清理。40 项 MySQL 测试覆盖迁移、六 Mapper、外键、唯一键、状态 / 结束原因、未知日期、UTC 微秒、乐观锁和事务；加上 18 项 HTTP 测试，共 58 项，均无失败或跳过。已验证 Windows / MySQL 8.0.34；MySQL 8.4 与其他操作系统的隔离脚本尚未验证。显式 CI 测试设置要求见 [数据库说明](docs/database.md#数据库验收)。
 
 ## 工作流入口
 
@@ -97,16 +114,16 @@ GET /api/v1/health 返回：
 - [项目技能](.agents/skills/offerflow-workflow/SKILL.md)：可显式使用 `$offerflow-workflow`。
 - [工作流初始化记录](openspec/changes/archive/2026-10-06-bootstrap-workflow/proposal.md)。
 - [首个开发 change](openspec/changes/archive/2026-10-06-initialize-backend-foundation/proposal.md)：范围、设计和验证。
+- [数据库 change](openspec/changes/archive/2026-10-07-initialize-persistence-model/proposal.md) 与 [验证证据](openspec/changes/archive/2026-10-07-initialize-persistence-model/processing/verification.md)。
 
 默认一个助手顺序承担角色，自审标为 SELF_REVIEW。角色契约不自动启动 agent；项目尚未接入业务 AI 功能。
 
 ## 后续阶段
 
-1. 数据库迁移与核心表。
-2. 公司与岗位管理。
-3. 投递与阶段历史。
-4. 待办与面试管理。
-5. Dashboard 和 MVP 联调。
+1. 公司与岗位管理。
+2. 投递与阶段历史。
+3. 待办与面试管理。
+4. Dashboard 和 MVP 联调。
 
 **一个 change 推送 GitHub 一次**：实施、修复、审查和验证在本地完成，验收后同步规范、归档，再统一提交并普通推送。未明确的业务决定在相应 change 中复核，不重复索要已有授权。
 

@@ -18,6 +18,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(controllers = HealthController.class,
         properties = "logging.level.io.github.ysuestc.offerflow.common.exception.GlobalExceptionHandler=OFF")
 @Import(ApiContractTest.ContractProbeController.class)
+@ActiveProfiles("standalone")
 class ApiContractTest {
 
     private static final String PRIVATE_MARKER = "PRIVATE_INPUT_OR_FAILURE_TOKEN";

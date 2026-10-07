@@ -1,6 +1,8 @@
 spring:
   application:
     name: offerflow
+  profiles:
+    default: standalone
 
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}

@@ -13,12 +13,20 @@ The project SHALL build with Java 21 using a project-local Maven Wrapper and SHA
 - **THEN** the configured Maven version compiles the application, runs applicable tests and packages an executable Jar
 
 ### Requirement: Independent HTTP liveness
-The backend SHALL start without MySQL or Redis in this stage and SHALL expose GET /api/v1/health as an HTTP process liveness endpoint.
+The backend SHALL support an explicit standalone mode that starts without MySQL or Redis and a mysql mode that requires successful database connection and migrations. GET /api/v1/health SHALL remain an HTTP process liveness endpoint.
 
 #### Scenario: Check a started application
-- **WHEN** a JSON client requests GET /api/v1/health
-- **THEN** HTTP 200 contains code SUCCESS and data.status UP
+- **WHEN** a developer starts the default standalone profile without database settings
+- **THEN** the application starts and GET /api/v1/health returns HTTP 200 with code SUCCESS and data.status UP
 - **AND** no database readiness claim is made
+
+#### Scenario: Start mysql with a valid database
+- **WHEN** the mysql profile is selected with valid configuration for an empty supported MySQL database
+- **THEN** Flyway migrations complete before startup succeeds and the health response keeps its existing contract
+
+#### Scenario: Start mysql with an unavailable database
+- **WHEN** the mysql profile cannot connect or validate its database
+- **THEN** startup fails rather than silently disabling persistence or migrations
 
 ### Requirement: Common response envelope
 Ordinary JSON API success and error responses MUST include code, message and data. DTO field validation details SHALL use optional errors containing only field names and safe constraint messages, and MUST NOT include rejected input values.
