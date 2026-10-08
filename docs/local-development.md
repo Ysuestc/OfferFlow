@@ -32,6 +32,25 @@ python scripts/run_local.py --mysql-bin '<MySQL 安装目录>/bin'
 python scripts/run_local.py --stop
 ```
 
+### 重启电脑后重新连接
+
+电脑重启会停止 Java 和本地 MySQL，目前没有开机自启。打开 PowerShell，进入项目目录，重新执行启动命令；使用与之前相同的 instance 和端口：
+
+```powershell
+cd '<OfferFlow 项目目录>'
+python scripts/run_local.py --mysql-bin '<MySQL 安装目录>/bin' --instance local --port 8082
+```
+
+看到 `OfferFlow ready: http://127.0.0.1:8082` 后，电脑浏览器访问该地址。**使用期间保持启动终端打开**；每次重启无需重新构建或安装依赖，数据保留在原实例目录。若先前使用默认端口 8080，就继续指定 `--port 8080`。
+
+本机就绪检查直接连接 127.0.0.1，不经过系统或环境 HTTP 代理；应用等待最多 60 秒，期间自动重试暂时连接拒绝、超时与 HTTP 未就绪。持续失败会显示简短提示，并关闭自有进程、保留数据；根据提示查看 `private-data/<instance>/application.log` 或 `mysql.log`，不要公开分享完整私有日志。若显示 `This local instance is already running`，说明已有启动终端在运行，使用它显示的地址；不要重复启动或删除锁文件。浏览器显示连接被拒绝时，先确认终端是否已经出现 ready。
+
+启动脚本回归检查无需 Maven、Node 或数据库：
+
+```powershell
+python -m unittest discover -s scripts/tests -v
+```
+
 脚本只停止自己启动的进程，**保留保存的数据和随机凭据**，再次使用同一命令会恢复。private-data 已被 Git 忽略，包含个人数据、凭据及本地日志；请自行备份整个实例目录，不提交公开仓库。不要在实例运行时复制 datadir 当作一致数据库备份。
 
 --instance '<name>' 可创建独立数据空间，启动和停止需指定同一个名称；命名限制为小写字母、数字和连字符。文件锁防止同一数据目录启动两个实例；外部链接 / 不匹配的服务器目录会阻止运行。脚本不自动重置已存在的未知数据目录。

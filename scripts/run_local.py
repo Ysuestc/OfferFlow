@@ -9,6 +9,7 @@ import secrets
 import socket
 import subprocess
 import time
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -44,6 +45,42 @@ def mysql(binary, port, password, sql):
                            f"--port={port}", "--user=root", "--batch", "--skip-column-names"],
                           input=sql, encoding="utf-8", capture_output=True, env=environment,
                           timeout=10, creationflags=WINDOWS_FLAGS)
+
+
+def wait_for_application(app_process, database_process, log_path, timeout=60):
+    # A desktop proxy can be unavailable after reboot; loopback never needs it.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if app_process.poll() is not None:
+            raise RuntimeError("Application startup failed; see private-data instance application.log")
+        if database_process.poll() is not None:
+            raise RuntimeError("Owned MySQL exited during application startup; see instance mysql.log")
+        log = log_path.read_text(encoding="utf-8", errors="replace")
+        match = re.search(r"Tomcat started on port (\d+)", log)
+        if match:
+            url = f"http://127.0.0.1:{match.group(1)}"
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            try:
+                with opener.open(url + "/api/v1/workspace", timeout=min(3, remaining)) as response:
+                    payload = json.load(response)
+            except (urllib.error.URLError, TimeoutError, ConnectionError):
+                # Tomcat's log alone does not guarantee a successful HTTP probe.
+                pass
+            except (ValueError, UnicodeError):
+                raise RuntimeError("Invalid local workspace response; see instance application.log") from None
+            else:
+                if not isinstance(payload, dict) or not isinstance(payload.get("data"), dict):
+                    raise RuntimeError("Invalid local workspace response; see instance application.log")
+                if payload["data"].get("available") is not True:
+                    raise RuntimeError("Business mode unavailable; see instance application.log")
+                if app_process.poll() is not None or database_process.poll() is not None:
+                    raise RuntimeError("Owned process exited during readiness check; saved data retained")
+                return url
+        time.sleep(min(0.25, max(0, deadline - time.monotonic())))
+    raise RuntimeError("Application readiness timed out; saved data retained. See instance application.log")
 
 
 def main():
@@ -172,22 +209,9 @@ def main():
             app_process = subprocess.Popen(["java", "-jar", str(jar), "--spring.profiles.active=mysql",
                     "--server.address=127.0.0.1", f"--server.port={args.port}"], cwd=WORKSPACE, env=environment,
                     stdout=app_log, stderr=subprocess.STDOUT, creationflags=WINDOWS_FLAGS)
-            for _ in range(240):
-                if app_process.poll() is not None:
-                    raise RuntimeError("Application startup failed; see private-data instance application.log")
-                log = (root / "application.log").read_text(encoding="utf-8", errors="replace")
-                match = re.search(r"Tomcat started on port (\d+)", log)
-                if match:
-                    url = f"http://127.0.0.1:{match.group(1)}"
-                    with urllib.request.urlopen(url + "/api/v1/workspace", timeout=3) as response:
-                        if not json.load(response)["data"]["available"]:
-                            raise RuntimeError("Business mode unavailable")
-                    print("OfferFlow ready: " + url, flush=True)
-                    print("Data retained in private-data/" + args.instance + ". Press Ctrl+C to stop.", flush=True)
-                    break
-                time.sleep(0.25)
-            else:
-                raise RuntimeError("Application readiness timed out")
+            url = wait_for_application(app_process, database_process, root / "application.log")
+            print("OfferFlow ready: " + url, flush=True)
+            print("Data retained in private-data/" + args.instance + ". Press Ctrl+C to stop.", flush=True)
             while app_process.poll() is None and database_process.poll() is None:
                 if stop_request.exists():
                     stop_request.unlink()

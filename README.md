@@ -30,6 +30,8 @@ python scripts/run_local.py --stop
 
 再次启动复用原数据。重建前先停止实例，避免 Windows 的运行文件锁。系统 Node 较旧时可给 build.py 指定 --node '<Node executable>'，无需更改全局安装。
 
+电脑重启后，在项目目录重新运行同一启动命令，看到 `OfferFlow ready` 再打开浏览器，并保持启动终端运行；不需要重新构建。可用 `--instance local --port 8082` 指定原实例和端口。本机探测直连 loopback，并在有限时间内重试暂时连接失败，详见 [重启与连接排查](docs/local-development.md#重启电脑后重新连接)。
+
 使用已有专用空 MySQL 数据库：
 
 ```powershell
