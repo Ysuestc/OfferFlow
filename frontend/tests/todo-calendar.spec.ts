@@ -24,6 +24,18 @@ async function openCalendar(page: Page, query: string) {
   await expect(page.locator('.todo-calendar')).toBeVisible()
 }
 const noOverflow = async (page: Page) => expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+async function daytimeFits(page: Page) {
+  await expect(page.locator('.calendar-main .el-loading-mask')).toHaveCount(0)
+  await page.locator('.time-calendar').scrollIntoViewIfNeeded()
+  await expect.poll(() => page.evaluate(() => {
+    const box = document.querySelector('.time-calendar')!.getBoundingClientRect()
+    const head = document.querySelector('.time-head')!.getBoundingClientRect()
+    const first = document.querySelector('.hour-row[data-hour="9"]')!.getBoundingClientRect()
+    const last = document.querySelector('.hour-row[data-hour="20"]')!.getBoundingClientRect()
+    return box.top >= -1 && box.bottom <= innerHeight + 1 && first.top >= head.bottom - 1 && last.bottom <= box.bottom + 1
+  })).toBe(true)
+  await expect(page.locator('.hour-row')).toHaveCount(24)
+}
 
 test('calendar date calculations preserve local midnight and month end', () => {
   const date = new Date(2026, 9, 18)
@@ -46,8 +58,15 @@ test('week, day and month retain midnight, same-hour and undated todos', async (
   await todo(request, app.id, '深夜材料截止', '2026-10-13T23:59:00+08:00', 'MATERIAL')
   await todo(request, app.id, '尚未定时间', null, 'OTHER')
   await openCalendar(page, name)
-  await expect(page.locator('.time-event')).toHaveCount(4)
-  await expect(page.locator('.hour-row[data-hour="9"] .time-event')).toHaveCount(2)
+  await expect(page.locator('.time-event')).toHaveCount(3)
+  await expect(page.locator('.hour-row[data-hour="9"] .time-event')).toHaveCount(1)
+  await page.getByRole('button', { name: '2026-10-13 09:00 查看全部 2 项待办', exact: true }).click()
+  const crowded = page.getByRole('dialog', { name: '同一时段的待办', exact: true })
+  await expect(crowded.locator('.hour-detail-event')).toHaveCount(2)
+  await crowded.getByRole('button', { name: /同小时笔试/ }).click()
+  const detail = page.getByRole('dialog', { name: '待办日程', exact: true })
+  await expect(detail.getByRole('heading', { name: '同小时笔试', exact: true })).toBeVisible()
+  await detail.getByRole('button', { name: '关闭此对话框' }).click()
   await expect(page.locator('.hour-row[data-hour="0"] .time-event')).toContainText('午夜测评')
   await expect(page.locator('.undated-card')).toContainText('尚未定时间')
   await page.getByRole('button', { name: '月视图', exact: true }).click()
@@ -55,10 +74,20 @@ test('week, day and month retain midnight, same-hour and undated todos', async (
   await expect(cell.locator('.month-event')).toHaveCount(3)
   await cell.getByRole('button', { name: '还有 1 项，查看全部' }).click()
   await expect(page.getByRole('button', { name: '日视图', exact: true })).toHaveAttribute('aria-pressed', 'true')
-  await expect(page.locator('.time-event')).toHaveCount(4)
+  await expect(page.locator('.time-event')).toHaveCount(3)
+  for (const viewport of [{ width: 1440, height: 1000 }, { width: 1366, height: 768 }]) {
+    await page.setViewportSize(viewport)
+    for (const view of ['周视图', '日视图']) {
+      await page.getByRole('button', { name: view, exact: true }).click()
+      await expect(page.locator('.time-event')).toHaveCount(3)
+      await daytimeFits(page)
+      await noOverflow(page)
+    }
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 })
   await noOverflow(page)
   await page.getByRole('button', { name: '周视图', exact: true }).click()
-  await expect(page.locator('.time-event')).toHaveCount(4)
+  await expect(page.locator('.time-event')).toHaveCount(3)
   await expect(page.locator('.calendar-main .el-loading-mask')).toHaveCount(0)
   await mkdir('../target/calendar-evidence', { recursive: true })
   await page.locator('.todo-calendar').screenshot({ path: '../target/calendar-evidence/week.png', animations: 'disabled' })
@@ -148,8 +177,12 @@ test('calendar fetches later pages and does not hide dense schedules', async ({ 
     await route.fulfill({ json: { code: 'SUCCESS', data: { items: items.slice((current - 1) * 100, current * 100), total: 101, page: current, size: 100 } } })
   })
   await openCalendar(page, '分页虚构公司')
-  await expect(page.locator('.time-event')).toHaveCount(101)
-  await expect(page.locator('.time-event').last()).toContainText('分页日程-100')
+  await expect(page.locator('.time-event')).toHaveCount(1)
+  await daytimeFits(page)
+  await page.getByRole('button', { name: '2026-10-13 09:00 查看全部 101 项待办', exact: true }).click()
+  const crowded = page.getByRole('dialog', { name: '同一时段的待办', exact: true })
+  await expect(crowded.locator('.hour-detail-event')).toHaveCount(101)
+  await expect(crowded.locator('.hour-detail-event').last()).toContainText('分页日程-100')
   expect(pages).toEqual([1, 2])
 })
 

@@ -13,6 +13,7 @@ const undated = ref<Todo[]>([])
 const loading = ref(false)
 const error = ref('')
 const selected = ref<Todo>()
+const selectedHour = ref<{ date: Date; hour: number }>()
 const timeline = ref<HTMLElement>()
 const hours = Array.from({ length: 24 }, (_, index) => index)
 const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
@@ -41,6 +42,7 @@ const groups = computed(() => {
 })
 function onDay(date: Date) { return groups.value.get(dateKey(date)) || [] }
 function inHour(date: Date, hour: number) { return onDay(date).filter(todo => new Date(todo.dueAt!).getHours() === hour) }
+const hourItems = computed(() => selectedHour.value ? inHour(selectedHour.value.date, selectedHour.value.hour) : [])
 function currentMonth(date: Date) { return date.getMonth() === localDate(anchor.value).getMonth() }
 function showDay(date: Date) { anchor.value = dateKey(date); view.value = 'day' }
 function navigate(direction: number) { anchor.value = dateKey(navigateDate(localDate(anchor.value), view.value, direction)) }
@@ -93,8 +95,9 @@ async function load() {
 async function scrollToMorning() {
   await nextTick()
   const container = timeline.value
-  const row = container?.querySelector('[data-hour="7"]')
-  if (container && row) container.scrollTop += row.getBoundingClientRect().top - container.getBoundingClientRect().top - 70
+  const row = container?.querySelector('[data-hour="9"]')
+  const header = container?.querySelector('.time-head')
+  if (container && row) container.scrollTop += row.getBoundingClientRect().top - container.getBoundingClientRect().top - (header?.getBoundingClientRect().height || 0)
 }
 watch([anchor, view, () => props.q, () => props.category, () => props.completion, () => props.timing], load)
 watch(loading, value => { if (!value && !error.value && view.value !== 'month') scrollToMorning() })
@@ -158,7 +161,8 @@ defineExpose({ load })
               <time class="hour-label">{{ String(hour).padStart(2, '0') }}:00</time>
               <div v-for="date in days" :key="dateKey(date)" class="hour-cell" :class="{ 'is-today': dateKey(date) === todayKey }" :data-date="dateKey(date)">
                 <button class="hour-add" :aria-label="dateKey(date) + ' ' + String(hour).padStart(2, '0') + ':00 新增待办'" @click="emit('create', atHour(date, hour))" />
-                <button v-for="todo in inHour(date, hour)" :key="todo.id" class="calendar-event time-event" :class="['kind-' + todo.kind, { completed: todo.completed }]" @click="selected = todo"><strong>{{ todo.title }}</strong><span>{{ clockTime(todo.dueAt!) }} · {{ todo.companyName }}</span></button>
+                <button v-for="todo in inHour(date, hour).slice(0, 1)" :key="todo.id" class="calendar-event time-event" :class="['kind-' + todo.kind, { completed: todo.completed, crowded: inHour(date, hour).length > 1 }]" :title="todo.title + ' · ' + clockTime(todo.dueAt!) + ' · ' + todo.companyName" @click="selected = todo"><strong>{{ todo.title }}</strong><span>{{ clockTime(todo.dueAt!) }} · {{ todo.companyName }}</span></button>
+                <button v-if="inHour(date, hour).length > 1" class="hour-more" :aria-label="dateKey(date) + ' ' + String(hour).padStart(2, '0') + ':00 查看全部 ' + inHour(date, hour).length + ' 项待办'" @click="selectedHour = { date, hour }">+{{ inHour(date, hour).length - 1 }}</button>
               </div>
             </div>
           </div>
@@ -166,6 +170,10 @@ defineExpose({ load })
         </template>
       </div>
     </div>
+    <el-dialog v-if="selectedHour" :model-value="true" title="同一时段的待办" width="min(540px, calc(100% - 28px))" @close="selectedHour = undefined">
+      <p class="hour-detail-caption">{{ dateKey(selectedHour.date) }} · {{ String(selectedHour.hour).padStart(2, '0') }} 点 · 共 {{ hourItems.length }} 项</p>
+      <div class="hour-detail-list"><button v-for="todo in hourItems" :key="todo.id" class="calendar-event hour-detail-event" :class="['kind-' + todo.kind, { completed: todo.completed }]" @click="selected = todo; selectedHour = undefined"><strong>{{ todo.title }}</strong><span>{{ clockTime(todo.dueAt!) }} · {{ todo.companyName }}</span></button></div>
+    </el-dialog>
     <el-dialog v-if="selected" :model-value="true" title="待办日程" width="min(540px, calc(100% - 28px))" @close="selected = undefined">
       <div class="calendar-detail">
         <span class="detail-kind" :class="'kind-' + selected.kind">{{ todoKinds[selected.kind] }} · {{ selected.completed ? '已完成' : '未完成' }}</span>
@@ -231,10 +239,12 @@ defineExpose({ load })
 .time-head { position: sticky; top: 0; z-index: 3; background: white; border-bottom: 1px solid var(--calendar-border); }
 .time-head button { background: white; border: 0; border-left: 1px solid var(--calendar-border); padding: 12px 7px; text-align: left; font: inherit; cursor: pointer; color: #76886f; }.time-head button span { font-size: 10px; display: block; }.time-head button strong { display: block; font-size: 19px; font-weight: 500; padding-top: 5px; }.time-head button.is-today { color: #17695a; background: #f2f7ed; }
 .time-zone { font-size: 9px; color: #a3ae9b; padding: 15px 7px; line-height: 1.7; }
-.hour-row { min-height: 65px; border-bottom: 1px solid #edf0e9; }.hour-label { font-size: 9px; color: #9aa894; padding: 5px 5px 0; text-align: center; }
+.hour-row { height: 42px; min-height: 42px; border-bottom: 1px solid #edf0e9; }.hour-label { font-size: 9px; color: #9aa894; padding: 5px 5px 0; text-align: center; }
 .hour-cell { position: relative; padding: 3px; min-width: 0; border-left: 1px solid var(--calendar-border); }.hour-cell.is-today { background: #fcfdf9; }
 .hour-add { position: absolute; inset: 0; border: 0; background: none; cursor: pointer; }.hour-add:hover { background: #eaf2e550; }
-.time-event { display: block; padding: 8px 5px; margin-bottom: 3px; }.time-event strong { display: block; font-size: 11px; font-weight: 600; overflow-wrap: anywhere; }.time-event span { font-size: 9px; display: block; margin-top: 5px; color: var(--event-color); overflow-wrap: anywhere; }
+.time-event { display: block; height: 34px; padding: 3px 5px; }.time-event strong { display: block; font-size: 11px; line-height: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }.time-event span { font-size: 9px; line-height: 11px; display: block; margin-top: 2px; color: var(--event-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.time-event.crowded { padding-right: 35px; }.hour-more { position: absolute; right: 6px; top: 6px; z-index: 1; border: 1px solid #dae6d7; background: #fffffff0; color: #17695a; font: inherit; font-size: 10px; border-radius: 4px; padding: 2px 4px; cursor: pointer; }
+.hour-detail-caption { font-size: 12px; color: #8b9987; }.hour-detail-list { max-height: 360px; overflow-y: auto; }.hour-detail-event { padding: 10px; margin-bottom: 6px; }.hour-detail-event strong { font-size: 12px; display: block; overflow-wrap: anywhere; }.hour-detail-event span { font-size: 11px; display: block; margin-top: 5px; color: var(--event-color); }
 .current-hour .hour-label { color: #bc7755; font-weight: 700; }.current-hour .hour-cell.is-today { box-shadow: inset 0 2px #cc936d; }
 .calendar-empty { padding: 2px 18px 14px; color: #8b9987; font-size: 11px; line-height: 1.7; }
 .kind-INTERVIEW { --event-color: #288c79; --event-background: #eaf5ef; }.kind-WRITTEN_TEST { --event-color: #aa8242; --event-background: #fbf3df; }.kind-ASSESSMENT { --event-color: #5b87ad; --event-background: #edf4fc; }.kind-MATERIAL { --event-color: #8673ac; --event-background: #f1edf8; }.kind-OFFER_DEADLINE { --event-color: #bc715b; --event-background: #fbede6; }.kind-OTHER { --event-color: #7c8972; --event-background: #eff2e9; }
