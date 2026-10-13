@@ -7,6 +7,7 @@ import io.github.ysuestc.offerflow.todo.service.TodoService;
 import io.github.ysuestc.offerflow.todo.vo.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -24,9 +25,10 @@ public class TodoController {
             @RequestParam(required = false) @Positive Long applicationId,
             @RequestParam(required = false) TodoKind kind,
             @RequestParam(required = false) Boolean completed, @RequestParam(required = false) TodoTiming timing,
+            @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
             @RequestParam(defaultValue = "1") @Min(1) @Max(100000) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return ApiResponse.success(service.list(q, applicationId, kind, completed, timing, page, size));
+        return ApiResponse.success(service.list(q, applicationId, kind, completed, timing, from, to, page, size));
     }
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

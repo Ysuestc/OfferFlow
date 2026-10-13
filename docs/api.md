@@ -98,6 +98,8 @@ ENDED 必须提供五种 endReason 之一，其他阶段不能提供。REJECTED 
 
 筛选支持 applicationId、kind、completed=true/false、timing=UPCOMING/OVERDUE/UNDATED，q 匹配公司 / 岗位 / 标题。timing 只查询未完成项，组合 completed=true 返回空。UPCOMING=[now, now+7天)，OVERDUE=dueAt<now，UNDATED=dueAt null。按未完成优先、截止时间 ASC、未知最后、id ASC 排序。分页与关键词限制沿用公共合同。
 
+日历查询可成对提供 `from` / `to`（带时区 ISO-8601 时刻），筛选 `dueAt >= from && dueAt < to`，与原筛选取交集，时间未知项不进入区间。起点必须早于终点、跨度最多 62 天；只提供一端或不合法返回 400。省略两端保持原查询；计数与分页采用相同条件。例：`GET /api/v1/todos?from=2026-10-11T16:00:00Z&to=2026-10-18T16:00:00Z&size=100` 对应 UTC+8 的 10 月 12–18 日。日历逐页读取，未定未完成事项用原 `timing=UNDATED` 单独显示。
+
 ## Dashboard
 
 GET /api/v1/dashboard 返回：

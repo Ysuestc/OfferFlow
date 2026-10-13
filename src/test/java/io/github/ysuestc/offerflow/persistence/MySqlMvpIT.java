@@ -116,6 +116,41 @@ class MySqlMvpIT {
     }
 
     @Test
+    void calendarRangeHasHalfOpenBoundariesAndMatchingPageCounts() {
+        String app = application("SUBMITTED");
+        String start = todo(app, "INTERVIEW", "2026-10-12T00:00:00+08:00");
+        String middle = todo(app, "INTERVIEW", "2026-10-13T09:30:00+08:00");
+        todo(app, "OTHER", "2026-10-18T23:59:59.999999+08:00");
+        todo(app, "INTERVIEW", "2026-10-19T00:00:00+08:00");
+        todo(app, "INTERVIEW", "2026-10-11T23:59:59.999999+08:00");
+        todo(app, "INTERVIEW", null);
+        String range = "&from=2026-10-11T16:00:00Z&to=2026-10-18T16:00:00Z";
+        var first = get("/todos?size=1&page=1" + range);
+        assertThat(first.path("total").asLong()).isEqualTo(3);
+        assertThat(first.path("items").get(0).path("id").asText()).isEqualTo(start);
+        var second = get("/todos?size=1&page=2" + range);
+        assertThat(second.path("total").asLong()).isEqualTo(3);
+        assertThat(second.path("items").get(0).path("id").asText()).isEqualTo(middle);
+        assertThat(get("/todos?applicationId=" + app + "&kind=INTERVIEW" + range).path("total").asLong()).isEqualTo(2);
+        request(HttpMethod.PUT, "/todos/" + start + "/completion", Map.of("completed", true, "version", 0), 200);
+        assertThat(get("/todos?completed=true" + range).path("total").asLong()).isEqualTo(1);
+        assertThat(get("/todos?completed=false" + range).path("total").asLong()).isEqualTo(2);
+        assertThat(get("/todos?timing=UNDATED" + range).path("total").asLong()).isZero();
+        assertThat(get("/todos").path("total").asLong()).isEqualTo(6);
+    }
+
+    @Test
+    void calendarRangeRejectsIncompleteInvalidAndOversizedWindows() {
+        for (String query : List.of("from=2026-10-01T00:00:00Z", "to=2026-10-02T00:00:00Z",
+                "from=2026-10-02T00:00:00Z&to=2026-10-01T00:00:00Z",
+                "from=2026-10-01T00:00:00Z&to=2026-10-01T00:00:00Z",
+                "from=2026-10-01T00:00:00Z&to=2027-01-01T00:00:00Z", "from=bad&to=bad")) {
+            request(HttpMethod.GET, "/todos?" + query, null, 400);
+        }
+        assertThat(get("/todos?from=2026-10-01T00:00:00Z&to=2026-12-02T00:00:00Z").path("total").asLong()).isZero();
+    }
+
+    @Test
     void rejectsMissingAndCrossApplicationAssociations() {
         String app = application("SUBMITTED");
         String foreignInterview = interview(application("SUBMITTED"), null);

@@ -9,6 +9,16 @@ import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface TodoMapper extends BaseMapper<Todo> {
+    default List<TodoView> listViews(String q, Long applicationId, TodoKind kind, Boolean completed,
+            TodoTiming timing, Instant now, Instant until, int size, long offset) {
+        return listCalendarViews(q, applicationId, kind, completed, timing, now, until, null, null, size, offset);
+    }
+
+    default long countViews(String q, Long applicationId, TodoKind kind, Boolean completed,
+            TodoTiming timing, Instant now, Instant until) {
+        return countCalendarViews(q, applicationId, kind, completed, timing, now, until, null, null);
+    }
+
     @Select("""
         <script>
         SELECT x.id, x.application_id, c.name AS company_name, p.name AS position_name, x.interview_id, i.round_name AS interview_round, x.kind, x.title, x.due_at, x.completed, x.completed_at, x.notes, x.version, x.updated_at FROM todo x JOIN application a ON a.id = x.application_id JOIN job_position p ON p.id = a.job_position_id JOIN company c ON c.id = p.company_id LEFT JOIN interview i ON i.id = x.interview_id
@@ -19,6 +29,7 @@ public interface TodoMapper extends BaseMapper<Todo> {
             <if test="applicationId != null"> AND x.application_id = #{applicationId} </if>
             <if test="kind != null"> AND x.kind = #{kind} </if>
             <if test="completed != null"> AND x.completed = #{completed} </if>
+            <if test="from != null"> AND x.due_at &gt;= #{from} AND x.due_at &lt; #{to} </if>
             <if test="timing != null"> AND x.completed = 0
                 <choose>
                     <when test="timing.name() == 'UPCOMING'"> AND x.due_at &gt;= #{now} AND x.due_at &lt; #{until} </when>
@@ -30,9 +41,10 @@ public interface TodoMapper extends BaseMapper<Todo> {
         ORDER BY x.completed, x.due_at IS NULL, x.due_at, x.id LIMIT #{size} OFFSET #{offset}
         </script>
         """)
-    List<TodoView> listViews(@Param("q") String q, @Param("applicationId") Long applicationId,
+    List<TodoView> listCalendarViews(@Param("q") String q, @Param("applicationId") Long applicationId,
             @Param("kind") TodoKind kind, @Param("completed") Boolean completed,
             @Param("timing") TodoTiming timing, @Param("now") Instant now, @Param("until") Instant until,
+            @Param("from") Instant from, @Param("to") Instant to,
             @Param("size") int size, @Param("offset") long offset);
 
     @Select("""
@@ -45,6 +57,7 @@ public interface TodoMapper extends BaseMapper<Todo> {
             <if test="applicationId != null"> AND x.application_id = #{applicationId} </if>
             <if test="kind != null"> AND x.kind = #{kind} </if>
             <if test="completed != null"> AND x.completed = #{completed} </if>
+            <if test="from != null"> AND x.due_at &gt;= #{from} AND x.due_at &lt; #{to} </if>
             <if test="timing != null"> AND x.completed = 0
                 <choose>
                     <when test="timing.name() == 'UPCOMING'"> AND x.due_at &gt;= #{now} AND x.due_at &lt; #{until} </when>
@@ -55,9 +68,10 @@ public interface TodoMapper extends BaseMapper<Todo> {
         </where>
         </script>
         """)
-    long countViews(@Param("q") String q, @Param("applicationId") Long applicationId,
+    long countCalendarViews(@Param("q") String q, @Param("applicationId") Long applicationId,
             @Param("kind") TodoKind kind, @Param("completed") Boolean completed,
-            @Param("timing") TodoTiming timing, @Param("now") Instant now, @Param("until") Instant until);
+            @Param("timing") TodoTiming timing, @Param("now") Instant now, @Param("until") Instant until,
+            @Param("from") Instant from, @Param("to") Instant to);
 
     @Select("""
         SELECT x.id, x.application_id, c.name AS company_name, p.name AS position_name, x.interview_id, i.round_name AS interview_round, x.kind, x.title, x.due_at, x.completed, x.completed_at, x.notes, x.version, x.updated_at FROM todo x JOIN application a ON a.id = x.application_id JOIN job_position p ON p.id = a.job_position_id JOIN company c ON c.id = p.company_id LEFT JOIN interview i ON i.id = x.interview_id WHERE x.id = #{id}

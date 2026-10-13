@@ -3,7 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { api, ApiError, interviewFormats, todoKinds, eventTime, type Application, type Interview, type InterviewSummary, type Todo, type Page } from '../api'
 
-const props = defineProps<{ kind: 'interview' | 'todo'; id?: string; application?: Application }>()
+const props = defineProps<{ kind: 'interview' | 'todo'; id?: string; application?: Application; initialDueAt?: Date }>()
 const emit = defineEmits<{ close: []; saved: [] }>()
 const formRef = ref<FormInstance>()
 const busy = ref(false)
@@ -19,7 +19,8 @@ const current = ref<Interview | Todo>()
 const form = reactive({
   applicationId: props.application?.id || '', roundName: '', interviewAt: null as Date | null,
   format: '' as string | null, questions: '', answers: '', review: '', result: '',
-  title: '', kind: 'INTERVIEW', dueAt: null as Date | null, interviewId: '' as string | null, notes: '', version: 0,
+  title: '', kind: 'INTERVIEW', dueAt: props.kind === 'todo' && !props.id && props.initialDueAt ? new Date(props.initialDueAt) : null as Date | null,
+  interviewId: '' as string | null, notes: '', version: 0,
 })
 if (props.application) choices.value = [props.application]
 const title = computed(() => (props.id ? '编辑' : '新增') + (props.kind === 'interview' ? '面试记录' : '待办事项'))

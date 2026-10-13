@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { api, eventTime, interviewFormats, todoKinds, type Application, type InterviewSummary, type Todo, type Page } from '../api'
 import ActivityEditor from './ActivityEditor.vue'
 import InterviewDetail from './InterviewDetail.vue'
+const TodoCalendar = defineAsyncComponent(() => import('./TodoCalendar.vue'))
 const props = defineProps<{ kind: 'interview' | 'todo'; application?: Application; initialTiming?: string }>()
 const emit = defineEmits<{ updated: []; application: [id: string] }>()
 const items = ref<(InterviewSummary | Todo)[]>([])
@@ -15,7 +16,11 @@ const page = ref(1)
 const total = ref(0)
 const loading = ref(false)
 const error = ref('')
-const editor = ref<{ id?: string }>()
+const editor = ref<{ id?: string; initialDueAt?: Date }>()
+const display = ref<'list' | 'calendar'>('list')
+const calendarQuery = ref('')
+const calendar = ref<{ load: () => Promise<void> }>()
+const showCalendar = computed(() => props.kind === 'todo' && !props.application && display.value === 'calendar')
 const detail = ref<string>()
 const pending = ref(new Set<string>())
 let sequence = 0
@@ -37,15 +42,16 @@ async function load() {
   } catch (cause) { if (request === sequence) error.value = cause instanceof Error ? cause.message : '加载失败' }
   finally { if (request === sequence) loading.value = false }
 }
-function search() { page.value = 1; load() }
+function search() { page.value = 1; calendarQuery.value = q.value; load() }
 function create() { editor.value = {} }
-async function saved() { editor.value = undefined; await load(); emit('updated') }
+async function refresh() { await load(); await calendar.value?.load() }
+async function saved() { editor.value = undefined; await refresh(); emit('updated') }
 async function complete(item: Todo) {
   pending.value.add(item.id)
   try {
     await api('/todos/' + item.id + '/completion', 'PUT', { completed: !item.completed, version: item.version })
     ElMessage.success(item.completed ? '已重新打开' : '已完成')
-    await load()
+    await refresh()
     emit('updated')
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : '操作失败'
@@ -60,7 +66,7 @@ async function remove(item: InterviewSummary | Todo) {
   try {
     await api('/' + props.kind + 's/' + item.id + '?version=' + item.version, 'DELETE')
     ElMessage.success('已删除')
-    await load()
+    await refresh()
     emit('updated')
   } catch (cause) { error.value = cause instanceof Error ? cause.message : '删除失败' }
   finally { pending.value.delete(item.id) }
@@ -77,7 +83,8 @@ watch(() => props.initialTiming, value => { timing.value = value || ''; search()
     <div v-if="application" class="section-heading"><h3>{{ kind === 'interview' ? '面试记录' : '待办事项' }} <span>{{ total }}</span></h3><el-button type="primary" plain size="small" @click="create">{{ kind === 'interview' ? '新增面试' : '新增待办' }}</el-button></div>
     <div class="toolbar activity-toolbar">
       <div class="search"><el-input v-model="q" clearable maxlength="100" :placeholder="kind === 'interview' ? '搜索公司、岗位或轮次' : '搜索公司、岗位或事项'" aria-label="搜索活动记录" @keyup.enter="search" @clear="search" /><el-button @click="search">搜索</el-button></div>
-      <el-button text :disabled="loading" @click="load">刷新</el-button>
+      <div v-if="kind === 'todo' && !application" class="todo-view-switch" aria-label="待办展示方式"><button :aria-pressed="display === 'list'" @click="display = 'list'">列表</button><button :aria-pressed="display === 'calendar'" @click="display = 'calendar'; calendarQuery = q">日历</button></div>
+      <el-button text :disabled="loading" @click="refresh">刷新</el-button>
     </div>
     <div class="activity-filters">
       <el-select v-model="category" clearable :placeholder="kind === 'interview' ? '全部形式' : '全部类型'" :aria-label="kind === 'interview' ? '筛选面试形式' : '筛选事项类型'" @change="search"><el-option v-for="(label, key) in (kind === 'interview' ? interviewFormats : todoKinds)" :key="key" :value="key" :label="label" /></el-select>
@@ -86,9 +93,10 @@ watch(() => props.initialTiming, value => { timing.value = value || ''; search()
         <el-select v-model="timing" clearable placeholder="全部时间" aria-label="筛选待办时间" @change="search"><el-option label="未来七天" value="UPCOMING" /><el-option label="已逾期" value="OVERDUE" /><el-option label="时间未定" value="UNDATED" /></el-select>
       </template>
     </div>
-    <div class="list-caption"><span>{{ q || category || completion || timing ? '筛选结果' : '全部记录' }}</span><small>共 {{ total }} 条</small></div>
+    <div v-if="!showCalendar" class="list-caption"><span>{{ q || category || completion || timing ? '筛选结果' : '全部记录' }}</span><small>共 {{ total }} 条</small></div>
     <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="list-error" />
-    <template v-else>
+    <TodoCalendar v-if="showCalendar" ref="calendar" :q="calendarQuery" :category="category" :completion="completion" :timing="timing" :pending="pending" @create="editor = { initialDueAt: $event }" @edit="editor = { id: $event }" @complete="complete" @remove="remove" @application="emit('application', $event)" />
+    <template v-if="!error && !showCalendar">
       <div class="record-list">
         <article v-for="item in items" :key="item.id" class="activity-record" :class="{ completed: 'completed' in item && item.completed }">
           <div class="activity-main">
@@ -113,7 +121,14 @@ watch(() => props.initialTiming, value => { timing.value = value || ''; search()
       <div v-if="!total && !loading" class="empty-state"><div class="empty-mark">{{ kind === 'interview' ? '◷' : '✓' }}</div><h2>还没有{{ q || category || completion || timing ? '匹配的' : '' }}记录</h2><p>{{ kind === 'interview' ? '记录每次面试，把经验变成下一次的准备。' : '把时间和截止事项记下来，逐项推进。' }}</p><el-button plain type="primary" @click="create">{{ kind === 'interview' ? '新增面试' : '新增待办' }}</el-button></div>
       <div v-if="total" class="pagination"><el-pagination v-model:current-page="page" :page-size="10" :total="total" layout="prev, pager, next" @current-change="load" /></div>
     </template>
-    <ActivityEditor v-if="editor" :kind="kind" :id="editor.id" :application="application" @close="editor = undefined" @saved="saved" />
+    <ActivityEditor v-if="editor" :kind="kind" :id="editor.id" :initial-due-at="editor.initialDueAt" :application="application" @close="editor = undefined" @saved="saved" />
     <InterviewDetail v-if="detail" :id="detail" @close="detail = undefined" @updated="detailUpdated" @application="openApplication" />
   </section>
 </template>
+
+<style scoped>
+.todo-view-switch { display: flex; margin-left: auto; background: #f1f5ef; border-radius: 8px; padding: 3px; }
+.todo-view-switch button { font: inherit; font-size: 12px; color: #82917a; border: 0; border-radius: 6px; padding: 7px 14px; background: none; cursor: pointer; }
+.todo-view-switch button[aria-pressed="true"] { color: #17695a; background: white; box-shadow: 0 1px 5px #183e2310; font-weight: 600; }
+.todo-view-switch button:focus-visible { outline: 2px solid #17695a; }
+</style>

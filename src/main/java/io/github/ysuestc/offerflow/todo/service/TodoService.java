@@ -11,6 +11,7 @@ import io.github.ysuestc.offerflow.todo.mapper.TodoMapper;
 import io.github.ysuestc.offerflow.todo.vo.TodoView;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
@@ -28,13 +29,17 @@ public class TodoService {
 
     @Transactional(readOnly = true)
     public PageResponse<TodoView> list(String q, Long applicationId, TodoKind kind, Boolean completed,
-            TodoTiming timing, int page, int size) {
+            TodoTiming timing, Instant from, Instant to, int page, int size) {
+        if ((from == null) != (to == null) || (from != null &&
+                (!from.isBefore(to) || Duration.between(from, to).compareTo(Duration.ofDays(62)) > 0))) {
+            throw new BusinessException(ApiErrorCode.BAD_REQUEST, "日历起止时间须同时提供，结束晚于开始且范围不超过 62 天");
+        }
         var now = clock.instant().truncatedTo(ChronoUnit.MICROS);
         var until = now.plus(Duration.ofDays(7));
         String search = InputText.search(q);
-        return new PageResponse<>(mapper.listViews(search, applicationId, kind, completed, timing, now, until,
+        return new PageResponse<>(mapper.listCalendarViews(search, applicationId, kind, completed, timing, now, until, from, to,
                 size, (long) (page - 1) * size),
-                mapper.countViews(search, applicationId, kind, completed, timing, now, until), page, size);
+                mapper.countCalendarViews(search, applicationId, kind, completed, timing, now, until, from, to), page, size);
     }
 
     public TodoView get(long id) {
