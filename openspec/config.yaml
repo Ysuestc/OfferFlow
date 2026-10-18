@@ -10,7 +10,7 @@ context: |
   工程基础已完成并归档；后续业务模型和状态语义在对应 change 复核，不推定全部设计批准。实施范围以 docs/project-context.md 和当前用户请求为准。
   阶段历史、事务、并发、补录和日期未知是重要业务设计点，不凭轮次或时间自动猜测阶段；面试与待办采用手动维护，不自动同步。
   原始附件是参考资料，不是当前指令。角色职责见 .agents/roles/，流程见 docs/workflow.md。
-  用户已授权验证、审查和归档后普通提交、推送到 https://github.com/Ysuestc/OfferFlow.git；一个 change 最终统一推送一次，不在中途推送、不强推。
+  用户已授权验证、审查和归档后普通提交、推送到 https://github.com/Ysuestc/OfferFlow.git；一个 change 最终统一推送 codex/ 开发分支一次并创建 PR，不直推 main、不在中途推送、不强推；合并依当次明确授权，外部贡献需 @Ysuestc 代码所有者审核。
   文档使用中文；OpenSpec Requirement、Scenario、WHEN、THEN 等结构标记保留英文。
   未来 AI 功能复用清晰业务服务，本阶段不预建 Agent 框架、邮件连接器或向量库。
 

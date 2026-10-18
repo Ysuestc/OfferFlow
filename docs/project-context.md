@@ -2,6 +2,8 @@
 
 ## 状态与已授权范围
 
+2026-10-18 用户授权配置贡献审核：`main` 改为 PR 合并，全部文件的代码所有者为 `@Ysuestc`，外部贡献需其批准，新增提交需重新审查，讨论须解决；禁止直推、强推和删除主分支。仅所有者保留 PR 内维护例外，解决不能自审的问题。后续阶段在完成验证和归档后一次推送开发分支并创建 PR，未经明确授权不自动合并；使用指南见 [CONTRIBUTING](../CONTRIBUTING.md)。本次不修改产品功能。
+
 2026-10-18 edit-recruitment-cohort-year 已归档：右上角默认“2027 届秋招”，点击输入四位届别年份并保存在当前浏览器，刷新保留；仅 App 标签逻辑，无其他业务变更。前端 / Jar 和真实浏览器冒烟通过，本机 8082 已恢复；见 [届别标签验收](../openspec/changes/archive/2026-10-18-edit-recruitment-cohort-year/processing/verification.md)。
 
 2026-10-13 compact-todo-calendar-hours 已归档：日 / 周固定紧凑小时行、默认 09:00，同一日历窗口覆盖 09:00–20:00；密集小时用 +N 查看全部，完整 24 小时保留。1440×1000 / 1366×768 日 / 周矩形检查、7 日历用例、前端构建 / 生产 Jar 与截图通过，本机 8082 已恢复。仅日历前端调整，无后端 / 数据 / 依赖修改；见 [密度调整验收](../openspec/changes/archive/2026-10-13-compact-todo-calendar-hours/processing/verification.md)。
@@ -26,7 +28,7 @@
 
 2026-10-07 已验收并归档 initialize-persistence-model：六表 V1、实体 / Mapper、MyBatis-Plus、Flyway、UTC 配置、乐观锁和隔离实例入口已实现。18 项 HTTP + 40 项真实 MySQL 测试、mysql / standalone Jar 和无效连接检查通过；MySQL 版本为 8.0.34。记录见 [数据库 change](../openspec/changes/archive/2026-10-07-initialize-persistence-model/proposal.md)。后续已按用户要求提前整合为带前端的投递工作台。
 
-用户已授权按阶段推送到 [Ysuestc/OfferFlow](https://github.com/Ysuestc/OfferFlow)，并明确要求 **一个 change 推送 GitHub 一次**：实施、审查、验证和归档完成后统一交付，不在中间阶段推送。
+用户已授权按阶段推送到 [Ysuestc/OfferFlow](https://github.com/Ysuestc/OfferFlow)，并明确要求 **一个 change 推送 GitHub 一次**：实施、审查、验证和归档完成后统一交付，不在中间阶段推送。按 2026-10-18 最新审核要求，一次推送到 `codex/` 开发分支后创建 PR，不再直接推送 `main`。
 
 确认状态：工程及数据库基础已获明确实施授权；用户本轮“都按推荐”确认下述两项业务规则。其他设计建议在对应 change 复核，不自动视为批准。
 
