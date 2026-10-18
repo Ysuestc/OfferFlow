@@ -44,7 +44,34 @@ const error = ref('')
 const editor = ref<{ kind: Kind; item?: Company | Position | Application; presetPosition?: Position }>()
 const detail = ref<string>()
 const currentView = computed(() => views[view.value])
-const year = new Date().getFullYear()
+const recruitmentYearKey = 'offerflow.recruitment-year'
+const validRecruitmentYear = /^[1-9]\d{3}$/
+const year = ref('2027')
+try {
+  const savedYear = localStorage.getItem(recruitmentYearKey)
+  if (savedYear && validRecruitmentYear.test(savedYear)) year.value = savedYear
+} catch {
+  ElMessage.warning('无法读取浏览器年份设置，暂显示 2027 届秋招')
+}
+async function editRecruitmentYear() {
+  let value: string
+  try {
+    const result = await ElMessageBox.prompt('输入毕业届别年份，例如 2027', '修改秋招届别', {
+      inputValue: year.value, confirmButtonText: '保存', cancelButtonText: '取消', closeOnClickModal: false,
+      inputValidator: input => validRecruitmentYear.test(input.trim()) || '请输入四位届别年份，例如 2027',
+    })
+    value = result.value.trim()
+  } catch (cause) {
+    if (cause !== 'cancel' && cause !== 'close') ElMessage.error('无法打开年份设置，请重试')
+    return
+  }
+  try {
+    localStorage.setItem(recruitmentYearKey, value)
+    year.value = value
+  } catch {
+    ElMessage.error('年份未保存，请检查浏览器存储权限后重试')
+  }
+}
 let requestSequence = 0
 async function load() {
   if (!available.value) return
@@ -121,7 +148,7 @@ onMounted(boot)
       <div class="sidebar-footer">PERSONAL WORKSPACE <span>v0.1</span></div>
     </aside>
     <main>
-      <header class="topbar"><span>工作空间 <span class="breadcrumb"> / {{ currentView.label }}</span></span><span class="season"><span class="small-dot"></span>{{ year }} 秋招</span></header>
+      <header class="topbar"><span>工作空间 <span class="breadcrumb"> / {{ currentView.label }}</span></span><button class="season" aria-label="修改秋招届别年份" title="点击修改毕业届别年份" @click="editRecruitmentYear"><span class="small-dot"></span>{{ year }} 届秋招</button></header>
       <div class="content">
         <section class="hero"><div><span class="eyebrow">YOUR NEXT CHAPTER</span><h1>{{ currentView.label }}</h1><p>{{ currentView.hint }}</p></div><el-button v-if="view !== 'mailbox'" type="primary" size="large" :disabled="!available || booting" @click="create">＋ {{ view === 'interviews' ? '新增面试' : view === 'todos' ? '新增待办' : view === 'positions' ? '新增岗位' : view === 'companies' ? '新增公司' : '新增投递' }}</el-button></section>
         <div v-if="view !== 'dashboard' && view !== 'mailbox'" class="overview" aria-label="资料概览">
@@ -174,3 +201,9 @@ onMounted(boot)
   </div>
   </ElConfigProvider>
 </template>
+
+<style scoped>
+button.season { border: 0; font: inherit; cursor: pointer; }
+button.season:hover { box-shadow: inset 0 0 0 1px #cedbc5; }
+button.season:focus-visible { outline: 2px solid #17695a; outline-offset: 2px; }
+</style>

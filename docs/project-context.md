@@ -2,6 +2,8 @@
 
 ## 状态与已授权范围
 
+2026-10-18 edit-recruitment-cohort-year 已归档：右上角默认“2027 届秋招”，点击输入四位届别年份并保存在当前浏览器，刷新保留；仅 App 标签逻辑，无其他业务变更。前端 / Jar 和真实浏览器冒烟通过，本机 8082 已恢复；见 [届别标签验收](../openspec/changes/archive/2026-10-18-edit-recruitment-cohort-year/processing/verification.md)。
+
 2026-10-13 compact-todo-calendar-hours 已归档：日 / 周固定紧凑小时行、默认 09:00，同一日历窗口覆盖 09:00–20:00；密集小时用 +N 查看全部，完整 24 小时保留。1440×1000 / 1366×768 日 / 周矩形检查、7 日历用例、前端构建 / 生产 Jar 与截图通过，本机 8082 已恢复。仅日历前端调整，无后端 / 数据 / 依赖修改；见 [密度调整验收](../openspec/changes/archive/2026-10-13-compact-todo-calendar-hours/processing/verification.md)。
 
 2026-10-13 add-todo-calendar 已交付并归档：待办主页面列表 / 日历切换、日 / 周时间轴、月网格、日期导航、类型颜色、未定侧栏、点击日期或时段预填及原 CRUD 复用。GET /todos 可选半开日期范围，不增字段、依赖或迁移；其他模块未改。121 Java / MySQL 与 11 前端验收（1 日期工具、10 电脑浏览器）通过，完整周 / 月截图已检查，本机 8082 已恢复。OpenSpec CLI 不可用，采用手工格式与 delta 检查，见 [日历验收](../openspec/changes/archive/2026-10-13-add-todo-calendar/processing/verification.md)。
